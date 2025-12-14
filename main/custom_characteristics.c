@@ -1,39 +1,83 @@
+/**
+   Copyright 2026 Achim Pieters | StudioPieters®
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+   for more information visit https://www.studiopieters.nl
+ **/
+
 #include "custom_characteristics.h"
 #include <math.h>
 
-// NOTE:
-// We use custom UUIDs so we don't depend on library-specific “known” characteristic IDs.
-// Home apps that don't recognize them will still show them in some 3rd-party apps.
-// If you prefer official HAP types and your library supports them, we can switch later.
-
-// StudioPieters custom UUID namespace (example UUIDs; keep stable once shipped!)
+// -----------------------------------------------------------------------------
+// Custom UUIDs (keep these stable once shipped)
+// -----------------------------------------------------------------------------
 #define UUID_VOLTAGE "E863F10A-079E-48FF-8F27-9C2605A29F52"
 #define UUID_CURRENT "E863F126-079E-48FF-8F27-9C2605A29F52"
 #define UUID_POWER   "E863F10D-079E-48FF-8F27-9C2605A29F52"
 #define UUID_ENERGY  "E863F10C-079E-48FF-8F27-9C2605A29F52"
 
-// Characteristics
-homekit_characteristic_t ch_voltage = HOMEKIT_CHARACTERISTIC_(
-    CUSTOM, 0, .type = UUID_VOLTAGE, .description = "Voltage (V)"
-);
+// -----------------------------------------------------------------------------
+// Characteristics (manual init — no macros, no override-init warnings)
+// -----------------------------------------------------------------------------
+homekit_characteristic_t ch_voltage = {
+    .type = UUID_VOLTAGE,
+    .description = "Voltage (V)",
+    .format = homekit_format_float,
+    .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
+    .value = HOMEKIT_FLOAT(0.0f),
+};
 
-homekit_characteristic_t ch_current = HOMEKIT_CHARACTERISTIC_(
-    CUSTOM, 0, .type = UUID_CURRENT, .description = "Current (A)"
-);
+homekit_characteristic_t ch_current = {
+    .type = UUID_CURRENT,
+    .description = "Current (A)",
+    .format = homekit_format_float,
+    .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
+    .value = HOMEKIT_FLOAT(0.0f),
+};
 
-homekit_characteristic_t ch_power = HOMEKIT_CHARACTERISTIC_(
-    CUSTOM, 0, .type = UUID_POWER, .description = "Power (W)"
-);
+homekit_characteristic_t ch_power = {
+    .type = UUID_POWER,
+    .description = "Power (W)",
+    .format = homekit_format_float,
+    .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
+    .value = HOMEKIT_FLOAT(0.0f),
+};
 
-homekit_characteristic_t ch_energy = HOMEKIT_CHARACTERISTIC_(
-    CUSTOM, 0, .type = UUID_ENERGY, .description = "Energy (Wh)"
-);
+homekit_characteristic_t ch_energy = {
+    .type = UUID_ENERGY,
+    .description = "Energy (Wh)",
+    .format = homekit_format_float,
+    .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
+    .value = HOMEKIT_FLOAT(0.0f),
+};
 
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 static inline float sane_float(float x) {
     if (isnan(x) || isinf(x)) return 0.0f;
     return x;
 }
 
+// -----------------------------------------------------------------------------
+// Init
+// -----------------------------------------------------------------------------
 void custom_characteristics_init(void) {
     ch_voltage.value = HOMEKIT_FLOAT(0.0f);
     ch_current.value = HOMEKIT_FLOAT(0.0f);
@@ -41,6 +85,9 @@ void custom_characteristics_init(void) {
     ch_energy.value  = HOMEKIT_FLOAT(0.0f);
 }
 
+// -----------------------------------------------------------------------------
+// Update + notify helpers
+// -----------------------------------------------------------------------------
 void hk_update_voltage(float v) {
     v = sane_float(v);
     ch_voltage.value = HOMEKIT_FLOAT(v);
@@ -61,7 +108,7 @@ void hk_update_power(float w) {
 
 void hk_update_energy(float wh) {
     wh = sane_float(wh);
-    if (wh < 0) wh = 0;
+    if (wh < 0.0f) wh = 0.0f;
     ch_energy.value = HOMEKIT_FLOAT(wh);
     homekit_characteristic_notify(&ch_energy, ch_energy.value);
 }

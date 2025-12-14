@@ -1,9 +1,10 @@
 #pragma once
 
+#include <stddef.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
-// Exposed characteristics (add these to your service list)
+// Exposed HomeKit characteristics
 extern homekit_characteristic_t ch_voltage;  // V
 extern homekit_characteristic_t ch_current;  // A
 extern homekit_characteristic_t ch_power;    // W

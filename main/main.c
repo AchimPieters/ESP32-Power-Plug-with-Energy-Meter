@@ -42,6 +42,7 @@
 // BL0937
 #include "bl0937.h"
 #include "bl0937_nvs.h"
+#include "bl0937_nvs_keys.h"
 
 // -------- GPIO configuration (set these in sdkconfig) --------
 #define BUTTON_GPIO      CONFIG_ESP_BUTTON_GPIO

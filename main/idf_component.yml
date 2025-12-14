@@ -6,4 +6,4 @@ dependencies:
   achimpieters/esp32-button:
     version: ">=1.2.3"
   achimpieters/esp32-bl0937:
-    version: "^1.2.0"
+    version: ">=1.2.3"
