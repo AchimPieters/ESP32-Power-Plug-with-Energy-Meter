@@ -81,6 +81,8 @@ static bool relay_on = false;
 
 // WiFi status (voor rode LED restore na OC flash)
 static bool wifi_ready = false;
+static bool homekit_ready = false;
+static bool homekit_started = false;
 
 // Overcurrent state
 static bool oc_latched = false;
@@ -143,7 +145,7 @@ static void relay_set_state(bool on, bool notify_homekit) {
         relay_on_characteristic.value = HOMEKIT_BOOL(relay_on);
 
         // Eventueel HomeKit-clients informeren
-        if (notify_homekit) {
+        if (notify_homekit && homekit_ready) {
                 homekit_characteristic_notify(&relay_on_characteristic,
                                               relay_on_characteristic.value);
         }
@@ -416,8 +418,6 @@ static void meter_task(void *args) {
 
 // ---------- Wi-Fi / HomeKit startup ----------
 void on_wifi_ready() {
-        static bool homekit_started = false;
-
         wifi_ready = true;
 
         // WiFi is nu up -> rode LED uit
@@ -427,13 +427,10 @@ void on_wifi_ready() {
                 ESP_LOGI("INFORMATION", "Starting HomeKit server...");
                 homekit_server_init(&config);
                 homekit_started = true;
+                homekit_ready = true;
+                custom_characteristics_set_notify_ready(true);
         } else {
                 ESP_LOGI("INFORMATION", "HomeKit server already running; skipping re-initialization");
-        }
-
-        // Start metering task (1x)
-        if (meter_task_handle == NULL) {
-                xTaskCreate(meter_task, "bl0937_meter", 4096, NULL, 2, &meter_task_handle);
         }
 }
 
@@ -445,11 +442,17 @@ void app_main(void) {
 
         // Init custom HK characteristics (startwaarden)
         custom_characteristics_init();
+        custom_characteristics_set_notify_ready(false);
 
         gpio_init();
 
         // BL0937 init
         ESP_ERROR_CHECK(meter_init());
+
+        // Start metering task (1x, ook als WiFi nog niet klaar is)
+        if (meter_task_handle == NULL) {
+                xTaskCreate(meter_task, "bl0937_meter", 4096, NULL, 2, &meter_task_handle);
+        }
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
