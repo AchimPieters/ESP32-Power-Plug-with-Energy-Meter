@@ -19,10 +19,13 @@ All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come f
 
 | Purpose | Kconfig option | Default GPIO |
 |---------|----------------|--------------|
-| Relay output | `CONFIG_ESP_RELAY_GPIO` | 3 |
-| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 4 |
-| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 6 |
+| Relay output | `CONFIG_ESP_RELAY_GPIO` | 6 |
+| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 20 |
+| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 8 |
 | Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 7 |
+| BL0937 CF (active pulse power) | `CONFIG_ESP_CF_PIN` | 4 |
+| BL0937 CF1 (voltage/current selector) | `CONFIG_ESP_CF1_PIN` | 5 |
+| BL0937 SEL (measurement mode) | `CONFIG_ESP_SEL_PIN` | 21 |
 
 The blue LED follows the relay output. The red LED stays on until Wi‑Fi is connected; it also lights up when Wi‑Fi fails to start or provisioning is required.
 
@@ -44,6 +47,7 @@ Prerequisites are declared in `main/idf_component.yml`:
 - ESP-IDF `>= 5.0`
 - `achimpieters/esp32-homekit >= 1.3.3`
 - `achimpieters/esp32-button >= 1.2.3`
+- `achimpieters/esp32-bl0937 >= 1.2.3`
 
 Typical workflow:
 
