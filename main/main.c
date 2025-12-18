@@ -455,8 +455,16 @@ void app_main(void) {
         btn_cfg.max_repeat_presses = 3;
         btn_cfg.long_press_time = 10000; // 10 seconds for lifecycle_factory_reset_and_reboot
 
-        if (button_create(BUTTON_GPIO, btn_cfg, button_callback, NULL)) {
-                ESP_LOGE(BUTTON_TAG, "Failed to initialize button");
+        int button_create_result = button_create(BUTTON_GPIO, btn_cfg, button_callback, NULL);
+        if (button_create_result != 0) {
+                ESP_LOGE(BUTTON_TAG, "Failed to initialize button (err=%d)", button_create_result);
+        } else {
+                ESP_LOGI(BUTTON_TAG,
+                         "Button configured: gpio=%d, active_level=%s, long_press=%dms, max_repeats=%d",
+                         BUTTON_GPIO,
+                         btn_cfg.active_level == button_active_low ? "low" : "high",
+                         btn_cfg.long_press_time,
+                         btn_cfg.max_repeat_presses);
         }
 
         esp_err_t wifi_err = wifi_start(on_wifi_ready);
