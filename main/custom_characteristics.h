@@ -12,6 +12,7 @@ extern homekit_characteristic_t ch_energy;   // Wh
 
 // Init + update helpers
 void custom_characteristics_init(void);
+void custom_characteristics_set_notify_ready(bool ready);
 
 void hk_update_voltage(float v);
 void hk_update_current(float a);

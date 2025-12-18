@@ -75,6 +75,12 @@ static inline float sane_float(float x) {
     return x;
 }
 
+static bool notifications_ready = false;
+
+void custom_characteristics_set_notify_ready(bool ready) {
+    notifications_ready = ready;
+}
+
 // -----------------------------------------------------------------------------
 // Init
 // -----------------------------------------------------------------------------
@@ -91,24 +97,32 @@ void custom_characteristics_init(void) {
 void hk_update_voltage(float v) {
     v = sane_float(v);
     ch_voltage.value = HOMEKIT_FLOAT(v);
-    homekit_characteristic_notify(&ch_voltage, ch_voltage.value);
+    if (notifications_ready) {
+        homekit_characteristic_notify(&ch_voltage, ch_voltage.value);
+    }
 }
 
 void hk_update_current(float a) {
     a = sane_float(a);
     ch_current.value = HOMEKIT_FLOAT(a);
-    homekit_characteristic_notify(&ch_current, ch_current.value);
+    if (notifications_ready) {
+        homekit_characteristic_notify(&ch_current, ch_current.value);
+    }
 }
 
 void hk_update_power(float w) {
     w = sane_float(w);
     ch_power.value = HOMEKIT_FLOAT(w);
-    homekit_characteristic_notify(&ch_power, ch_power.value);
+    if (notifications_ready) {
+        homekit_characteristic_notify(&ch_power, ch_power.value);
+    }
 }
 
 void hk_update_energy(float wh) {
     wh = sane_float(wh);
     if (wh < 0.0f) wh = 0.0f;
     ch_energy.value = HOMEKIT_FLOAT(wh);
-    homekit_characteristic_notify(&ch_energy, ch_energy.value);
+    if (notifications_ready) {
+        homekit_characteristic_notify(&ch_energy, ch_energy.value);
+    }
 }
