@@ -72,6 +72,34 @@ menu "StudioPieters"
               help
                 Tijd (ms) dat ON geblokkeerd is na een trip. 0 = geen lockout.
 
+      config ESP_BL0937_CF_HZ_PER_W_X1000
+              int "BL0937 CF calibration (Hz per W, x1000)"
+              default 1000
+              range 1 1000000
+              help
+                  Aantal Hz per Watt op de CF-pin. Gebruik x1000 scaling (bijv. 1500 = 1.5 Hz/W).
+
+      config ESP_BL0937_CF1_HZ_PER_V_X1000
+              int "BL0937 CF1 calibration (Hz per V, x1000)"
+              default 1000
+              range 1 1000000
+              help
+                  Aantal Hz per Volt op de CF1-pin wanneer SEL=1. Gebruik x1000 scaling.
+
+      config ESP_BL0937_CF1_HZ_PER_A_X1000
+              int "BL0937 CF1 calibration (Hz per A, x1000)"
+              default 1000
+              range 1 1000000
+              help
+                  Aantal Hz per Ampere op de CF1-pin wanneer SEL=0. Gebruik x1000 scaling.
+
+      config ESP_BL0937_CALIBRATION_LOG
+              bool "Enable BL0937 calibration logging"
+              default n
+              help
+                  Logt ruwe CF/CF1 frequenties voor eenvoudige kalibratie; gebruik dit samen met
+                  de Hz-per-unit instellingen om de metingen te tunen.
+
       config ESP_SETUP_CODE
               string "HomeKit Setup Code"
               default "693-41-208"
