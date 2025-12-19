@@ -1,0 +1,224 @@
+/**
+   Copyright 2026 Achim Pieters | StudioPieters®
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+   for more information visit https://www.studiopieters.nl
+ **/
+
+#include "bl0937.h"
+#include "custom_characteristics.h"
+
+#include <limits.h>
+
+#include <driver/gpio.h>
+#include <driver/pcnt.h>
+#include <esp_log.h>
+#include <esp_timer.h>
+#include <sdkconfig.h>
+
+#define BL0937_SAMPLE_INTERVAL_MS 1000
+
+static const char *BL_TAG = "BL0937";
+
+static esp_timer_handle_t sample_timer;
+static bool sel_voltage = false;
+static float last_voltage = 0.0f;
+static float last_current = 0.0f;
+static float energy_wh = 0.0f;
+
+static bl0937_overcurrent_cb_t overcurrent_cb;
+static void *overcurrent_ctx;
+
+static int overcurrent_hits = 0;
+static int64_t overcurrent_block_until_us = 0;
+
+static inline float hz_per_unit_w(void) {
+    return CONFIG_ESP_BL0937_CF_HZ_PER_W_X1000 / 1000.0f;
+}
+
+static inline float hz_per_unit_v(void) {
+    return CONFIG_ESP_BL0937_CF1_HZ_PER_V_X1000 / 1000.0f;
+}
+
+static inline float hz_per_unit_a(void) {
+    return CONFIG_ESP_BL0937_CF1_HZ_PER_A_X1000 / 1000.0f;
+}
+
+static void pcnt_setup(pcnt_unit_t unit, gpio_num_t gpio) {
+    pcnt_config_t cfg = {
+        .pulse_gpio_num = gpio,
+        .ctrl_gpio_num = PCNT_PIN_NOT_USED,
+        .channel = PCNT_CHANNEL_0,
+        .unit = unit,
+        .pos_mode = PCNT_COUNT_INC,
+        .neg_mode = PCNT_COUNT_INC,
+        .lctrl_mode = PCNT_MODE_KEEP,
+        .hctrl_mode = PCNT_MODE_KEEP,
+        .counter_h_lim = INT16_MAX,
+        .counter_l_lim = 0,
+    };
+
+    ESP_ERROR_CHECK(pcnt_unit_config(&cfg));
+    ESP_ERROR_CHECK(pcnt_counter_pause(unit));
+    ESP_ERROR_CHECK(pcnt_counter_clear(unit));
+    ESP_ERROR_CHECK(pcnt_counter_resume(unit));
+}
+
+static float freq_to_value(float freq_hz, float hz_per_unit) {
+    if (hz_per_unit <= 0.0f) {
+        return 0.0f;
+    }
+
+    return freq_hz / hz_per_unit;
+}
+
+static void handle_overcurrent(float current_a) {
+#if CONFIG_ESP_OVERCURRENT_ENABLE
+    const float current_ma = current_a * 1000.0f;
+    const int64_t now_us = esp_timer_get_time();
+
+    if (now_us < overcurrent_block_until_us) {
+        return;
+    }
+
+    if (current_ma >= CONFIG_ESP_OVERCURRENT_A_X1000) {
+        overcurrent_hits++;
+        if (overcurrent_hits >= CONFIG_ESP_OVERCURRENT_DEBOUNCE_SAMPLES) {
+            overcurrent_hits = 0;
+            if (CONFIG_ESP_OVERCURRENT_COOLDOWN_MS > 0) {
+                overcurrent_block_until_us = now_us +
+                    ((int64_t)CONFIG_ESP_OVERCURRENT_COOLDOWN_MS * 1000LL);
+            }
+
+            if (overcurrent_cb) {
+                overcurrent_cb(overcurrent_ctx, current_a);
+            }
+        }
+    } else {
+        overcurrent_hits = 0;
+    }
+#else
+    (void)current_a;
+#endif
+}
+
+static void sample_timer_cb(void *arg) {
+    (void)arg;
+
+    int16_t cf_count = 0;
+    int16_t cf1_count = 0;
+    const float interval_s = BL0937_SAMPLE_INTERVAL_MS / 1000.0f;
+
+    pcnt_get_counter_value(PCNT_UNIT_0, &cf_count);
+    pcnt_get_counter_value(PCNT_UNIT_1, &cf1_count);
+
+    pcnt_counter_clear(PCNT_UNIT_0);
+    pcnt_counter_clear(PCNT_UNIT_1);
+
+    const float cf_freq = cf_count / interval_s;
+    const float cf1_freq = cf1_count / interval_s;
+
+    const float power_w = freq_to_value(cf_freq, hz_per_unit_w());
+
+    if (sel_voltage) {
+        last_voltage = freq_to_value(cf1_freq, hz_per_unit_v());
+        hk_update_voltage(last_voltage);
+    } else {
+        last_current = freq_to_value(cf1_freq, hz_per_unit_a());
+        hk_update_current(last_current);
+    }
+
+    hk_update_power(power_w);
+
+    energy_wh += (power_w * interval_s) / 3600.0f;
+    hk_update_energy(energy_wh);
+
+    handle_overcurrent(last_current);
+
+#if CONFIG_ESP_BL0937_CALIBRATION_LOG
+    ESP_LOGI(BL_TAG,
+             "Calibration sample: CF=%.2fHz CF1=%.2fHz SEL=%s",
+             cf_freq,
+             cf1_freq,
+             sel_voltage ? "V" : "A");
+#endif
+
+    sel_voltage = !sel_voltage;
+    gpio_set_level(CONFIG_ESP_SEL_PIN, sel_voltage ? 1 : 0);
+}
+
+void bl0937_set_overcurrent_callback(bl0937_overcurrent_cb_t cb, void *ctx) {
+    overcurrent_cb = cb;
+    overcurrent_ctx = ctx;
+}
+
+void bl0937_init(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << CONFIG_ESP_CF_PIN) | (1ULL << CONFIG_ESP_CF1_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+
+    gpio_config_t sel_conf = {
+        .pin_bit_mask = (1ULL << CONFIG_ESP_SEL_PIN),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+
+    ESP_ERROR_CHECK(gpio_config(&sel_conf));
+    sel_voltage = false;
+    gpio_set_level(CONFIG_ESP_SEL_PIN, 0);
+
+    pcnt_setup(PCNT_UNIT_0, CONFIG_ESP_CF_PIN);
+    pcnt_setup(PCNT_UNIT_1, CONFIG_ESP_CF1_PIN);
+
+    esp_timer_create_args_t timer_args = {
+        .callback = &sample_timer_cb,
+        .name = "bl0937_sample",
+    };
+
+    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &sample_timer));
+
+    ESP_LOGI(BL_TAG, "BL0937 initialized on CF=%d CF1=%d SEL=%d",
+             CONFIG_ESP_CF_PIN, CONFIG_ESP_CF1_PIN, CONFIG_ESP_SEL_PIN);
+}
+
+void bl0937_start(void) {
+    if (!sample_timer) {
+        ESP_LOGW(BL_TAG, "BL0937 not initialized");
+        return;
+    }
+
+    ESP_ERROR_CHECK(esp_timer_start_periodic(sample_timer,
+                                             BL0937_SAMPLE_INTERVAL_MS * 1000));
+}
+
+void bl0937_stop(void) {
+    if (!sample_timer) {
+        return;
+    }
+
+    esp_timer_stop(sample_timer);
+}
