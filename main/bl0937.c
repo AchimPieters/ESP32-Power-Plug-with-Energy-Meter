@@ -204,6 +204,8 @@ void bl0937_init(void) {
 
     ESP_LOGI(BL_TAG, "BL0937 initialized on CF=%d CF1=%d SEL=%d",
              CONFIG_ESP_CF_PIN, CONFIG_ESP_CF1_PIN, CONFIG_ESP_SEL_PIN);
+    ESP_LOGI(BL_TAG, "Calibration Hz/unit: W=%.3f V=%.3f A=%.3f",
+             hz_per_unit_w(), hz_per_unit_v(), hz_per_unit_a());
 }
 
 void bl0937_start(void) {
