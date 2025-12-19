@@ -130,6 +130,13 @@ static void sample_timer_cb(void *arg) {
     pcnt_get_counter_value(PCNT_UNIT_0, &cf_count);
     pcnt_get_counter_value(PCNT_UNIT_1, &cf1_count);
 
+    if (cf_count < 0) {
+        cf_count = 0;
+    }
+    if (cf1_count < 0) {
+        cf1_count = 0;
+    }
+
     pcnt_counter_clear(PCNT_UNIT_0);
     pcnt_counter_clear(PCNT_UNIT_1);
 
