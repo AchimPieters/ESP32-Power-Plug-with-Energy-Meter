@@ -32,6 +32,7 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+#include "custom_characteristics.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -200,6 +201,10 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &ota_trigger,
+                        &ch_voltage,
+                        &ch_current,
+                        &ch_power,
+                        &ch_energy,
                         NULL
                 }),
                 NULL
@@ -257,6 +262,7 @@ void on_wifi_ready() {
 
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
+        custom_characteristics_set_notify_ready(true);
         homekit_started = true;
 }
 
@@ -266,6 +272,7 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_nvs_init());
         lifecycle_log_post_reset_state("INFORMATION");
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
+        custom_characteristics_init();
 
         gpio_init();
 
