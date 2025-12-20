@@ -1,20 +1,21 @@
 menu "StudioPieters"
 
+
       config ESP_RELAY_GPIO
               int "Set the GPIO for the Relay"
-              default 6
+              default 3
               help
                   The GPIO number the Relay is connected to.
 
       config ESP_BLUE_LED_GPIO
               int "Set the GPIO for the blue LED"
-              default 20
+              default 4
               help
                   The GPIO number the blue LED is connected to.
 
       config ESP_RED_LED_GPIO
               int "Set the GPIO for the red LED"
-              default 8
+              default 6
               help
                   The GPIO number the red LED is connected to.
 
@@ -23,78 +24,6 @@ menu "StudioPieters"
               default 7
               help
                   GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
-
-      config ESP_CF_PIN
-              int "Set the GPIO for the CF_PIN"
-              default 4
-              help
-                  The GPIO number the CF_PIN is connected to.
-
-      config ESP_CF1_PIN
-              int "Set the GPIO for the CF1_PIN"
-              default 5
-              help
-                  The GPIO number the CF1_PIN is connected to.
-
-      config ESP_SEL_PIN
-              int "Set the GPIO for the SEL_PIN"
-              default 21
-              help
-                  The GPIO number the SEL_PIN is connected to.
-
-      config ESP_BL0937_CF_HZ_PER_W_X1000
-              int "BL0937 CF calibration (Hz per W * 1000)"
-              default 1000
-              range 1 100000000
-              help
-                  Kalibratiefactor voor CF (vermogen). Waarde is Hz per Watt
-                  maal 1000. Standaard 1000 = 1.0 Hz/W.
-
-      config ESP_BL0937_CF1_HZ_PER_V_X1000
-              int "BL0937 CF1 calibration (Hz per V * 1000)"
-              default 1000
-              range 1 100000000
-              help
-                  Kalibratiefactor voor CF1 (spanning). Waarde is Hz per Volt
-                  maal 1000. Standaard 1000 = 1.0 Hz/V.
-
-      config ESP_BL0937_CF1_HZ_PER_A_X1000
-              int "BL0937 CF1 calibration (Hz per A * 1000)"
-              default 1000
-              range 1 100000000
-              help
-                  Kalibratiefactor voor CF1 (stroom). Waarde is Hz per Ampère
-                  maal 1000. Standaard 1000 = 1.0 Hz/A.
-
-      config ESP_OVERCURRENT_ENABLE
-              bool "Enable overcurrent protection"
-              default y
-              help
-                  Schakelt overcurrent policy in (relay gaat uit bij te hoge stroom).
-
-      config ESP_OVERCURRENT_A_X1000
-              int "Overcurrent threshold (mA)"
-              default 16000
-              depends on ESP_OVERCURRENT_ENABLE
-              range 100 50000
-              help
-                  Drempelstroom in milliampère. Voor 16A vul je 16000 in.
-
-      config ESP_OVERCURRENT_DEBOUNCE_SAMPLES
-              int "Overcurrent debounce (samples)"
-              default 3
-              depends on ESP_OVERCURRENT_ENABLE
-              range 1 20
-              help
-                  Aantal metingen achter elkaar boven threshold voordat er getript wordt.
-
-      config ESP_OVERCURRENT_COOLDOWN_MS
-              int "Overcurrent cooldown (ms)"
-              default 30000
-              depends on ESP_OVERCURRENT_ENABLE
-              range 0 600000
-              help
-                Tijd (ms) dat ON geblokkeerd is na een trip. 0 = geen lockout.
 
       config ESP_SETUP_CODE
               string "HomeKit Setup Code"
