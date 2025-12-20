@@ -32,8 +32,6 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
-#include "custom_characteristics.h"
-#include "bl0937.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -45,7 +43,6 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
-static const char *BL_TAG      = "BL0937";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
@@ -92,13 +89,6 @@ static void relay_set_state(bool on, bool notify_homekit) {
                 homekit_characteristic_notify(&relay_on_characteristic,
                                               relay_on_characteristic.value);
         }
-}
-
-static void overcurrent_trip(void *ctx, float current_a) {
-        (void)ctx;
-
-        ESP_LOGW(BL_TAG, "Overcurrent detected: %.3fA, turning relay off", current_a);
-        relay_set_state(false, true);
 }
 
 // All GPIO Settings
@@ -210,10 +200,6 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &ota_trigger,
-                        &ch_voltage,
-                        &ch_current,
-                        &ch_power,
-                        &ch_energy,
                         NULL
                 }),
                 NULL
@@ -271,7 +257,6 @@ void on_wifi_ready() {
 
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
-        custom_characteristics_set_notify_ready(true);
         homekit_started = true;
 }
 
@@ -283,10 +268,6 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
-        custom_characteristics_init();
-        bl0937_set_overcurrent_callback(overcurrent_trip, NULL);
-        bl0937_init();
-        bl0937_start();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;

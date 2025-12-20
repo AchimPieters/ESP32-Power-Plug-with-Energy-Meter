@@ -20,7 +20,7 @@
 
    for more information visit https://www.studiopieters.nl
  **/
- 
+
 #include <string.h>
 #include <stdbool.h>
 #include <stddef.h>
