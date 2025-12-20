@@ -93,12 +93,14 @@ static void relay_set_state(bool on, bool notify_homekit) {
         }
 }
 
+#if CONFIG_ESP_OVERCURRENT_ENABLE
 static void handle_overcurrent(void *ctx, float current_a) {
         (void)ctx;
 
         ESP_LOGW("BL0937", "Overcurrent %.3fA detected; turning relay OFF", current_a);
         relay_set_state(false, true);
 }
+#endif
 
 // All GPIO Settings
 void gpio_init(void) {
