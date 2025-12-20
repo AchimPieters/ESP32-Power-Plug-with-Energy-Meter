@@ -42,6 +42,33 @@ menu "StudioPieters"
               help
                   Enable logging of BL0937 calibration samples.
 
+      config ESP_OVERCURRENT_ENABLE
+              bool "Enable overcurrent protection"
+              default n
+              help
+                  Enable relay shutoff when the measured current exceeds the configured threshold.
+
+      config ESP_OVERCURRENT_A_X1000
+              int "Overcurrent threshold in A (x1000)"
+              default 10000
+              depends on ESP_OVERCURRENT_ENABLE
+              help
+                  Threshold in amps (scaled by 1000) above which the relay is disabled.
+
+      config ESP_OVERCURRENT_DEBOUNCE_SAMPLES
+              int "Overcurrent debounce samples"
+              default 3
+              depends on ESP_OVERCURRENT_ENABLE
+              help
+                  Number of consecutive samples above the threshold required to trigger shutdown.
+
+      config ESP_OVERCURRENT_COOLDOWN_MS
+              int "Overcurrent cooldown time (ms)"
+              default 5000
+              depends on ESP_OVERCURRENT_ENABLE
+              help
+                  Cooldown time after a shutdown before overcurrent detection can trigger again.
+
       config ESP_RELAY_GPIO
               int "Set the GPIO for the Relay"
               default 23
