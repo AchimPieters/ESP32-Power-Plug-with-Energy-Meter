@@ -1,5 +1,46 @@
 menu "StudioPieters"
 
+      config ESP_CF_PIN
+              int "BL0937 CF GPIO"
+              default 14
+              help
+                  GPIO number connected to the BL0937 CF (power) output.
+
+      config ESP_CF1_PIN
+              int "BL0937 CF1 GPIO"
+              default 27
+              help
+                  GPIO number connected to the BL0937 CF1 (voltage/current) output.
+
+      config ESP_SEL_PIN
+              int "BL0937 SEL GPIO"
+              default 26
+              help
+                  GPIO number connected to the BL0937 SEL pin.
+
+      config ESP_BL0937_CF_HZ_PER_W_X1000
+              int "BL0937 CF Hz per W (x1000)"
+              default 1000
+              help
+                  Calibration factor for CF output in Hz per Watt, scaled by 1000.
+
+      config ESP_BL0937_CF1_HZ_PER_V_X1000
+              int "BL0937 CF1 Hz per V (x1000)"
+              default 1000
+              help
+                  Calibration factor for CF1 output in Hz per Volt, scaled by 1000.
+
+      config ESP_BL0937_CF1_HZ_PER_A_X1000
+              int "BL0937 CF1 Hz per A (x1000)"
+              default 1000
+              help
+                  Calibration factor for CF1 output in Hz per Amp, scaled by 1000.
+
+      config ESP_BL0937_CALIBRATION_LOG
+              bool "Log BL0937 calibration samples"
+              default n
+              help
+                  Enable logging of BL0937 calibration samples.
 
       config ESP_RELAY_GPIO
               int "Set the GPIO for the Relay"
