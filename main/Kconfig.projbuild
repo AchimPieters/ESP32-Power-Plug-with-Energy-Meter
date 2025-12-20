@@ -42,6 +42,30 @@ menu "StudioPieters"
               help
                   The GPIO number the SEL_PIN is connected to.
 
+      config ESP_BL0937_CF_HZ_PER_W_X1000
+              int "BL0937 CF calibration (Hz per W * 1000)"
+              default 1000
+              range 1 100000000
+              help
+                  Kalibratiefactor voor CF (vermogen). Waarde is Hz per Watt
+                  maal 1000. Standaard 1000 = 1.0 Hz/W.
+
+      config ESP_BL0937_CF1_HZ_PER_V_X1000
+              int "BL0937 CF1 calibration (Hz per V * 1000)"
+              default 1000
+              range 1 100000000
+              help
+                  Kalibratiefactor voor CF1 (spanning). Waarde is Hz per Volt
+                  maal 1000. Standaard 1000 = 1.0 Hz/V.
+
+      config ESP_BL0937_CF1_HZ_PER_A_X1000
+              int "BL0937 CF1 calibration (Hz per A * 1000)"
+              default 1000
+              range 1 100000000
+              help
+                  Kalibratiefactor voor CF1 (stroom). Waarde is Hz per Ampère
+                  maal 1000. Standaard 1000 = 1.0 Hz/A.
+
       config ESP_OVERCURRENT_ENABLE
               bool "Enable overcurrent protection"
               default y
