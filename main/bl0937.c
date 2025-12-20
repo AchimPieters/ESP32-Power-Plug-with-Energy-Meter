@@ -23,7 +23,9 @@
 
 #include "bl0937.h"
 #include "custom_characteristics.h"
+#include "esp32-lcm.h"
 
+#include <inttypes.h>
 #include <limits.h>
 
 #include <driver/gpio.h>
@@ -31,6 +33,7 @@
 #include <esp_idf_version.h>
 #include <esp_log.h>
 #include <esp_timer.h>
+#include <nvs.h>
 #include <sdkconfig.h>
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 4, 0)
@@ -38,6 +41,9 @@
 #endif
 
 #define BL0937_SAMPLE_INTERVAL_MS 1000
+#define ENERGY_NVS_NAMESPACE "energy"
+#define ENERGY_NVS_KEY_WH "energy_wh"
+#define ENERGY_NVS_SAVE_INTERVAL_US (60LL * 1000LL * 1000LL)
 // Calibration values are provided via Kconfig (see ESP_BL0937_* options).
 
 static const char *BL_TAG = "BL0937";
@@ -46,7 +52,9 @@ static esp_timer_handle_t sample_timer;
 static bool sel_voltage = false;
 static float last_voltage = 0.0f;
 static float last_current = 0.0f;
-static float energy_wh = 0.0f;
+static uint64_t energy_wh = 0;
+static float energy_wh_fraction = 0.0f;
+static int64_t last_energy_save_us = 0;
 
 static bl0937_overcurrent_cb_t overcurrent_cb;
 static void *overcurrent_ctx;
@@ -72,6 +80,77 @@ static inline float hz_per_unit_v(void) {
 
 static inline float hz_per_unit_a(void) {
     return CONFIG_ESP_BL0937_CF1_HZ_PER_A_X1000 / 1000.0f;
+}
+
+static float energy_total_wh(void) {
+    return (float)energy_wh + energy_wh_fraction;
+}
+
+static void energy_load_from_nvs(void) {
+    esp_err_t init_err = lifecycle_nvs_init();
+    if (init_err != ESP_OK) {
+        ESP_LOGW(BL_TAG, "NVS init failed for energy restore: %s",
+                 esp_err_to_name(init_err));
+        return;
+    }
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(ENERGY_NVS_NAMESPACE, NVS_READONLY, &handle);
+    if (err == ESP_OK) {
+        uint64_t stored_wh = 0;
+        err = nvs_get_u64(handle, ENERGY_NVS_KEY_WH, &stored_wh);
+        nvs_close(handle);
+        if (err == ESP_OK) {
+            energy_wh = stored_wh;
+            energy_wh_fraction = 0.0f;
+            hk_update_energy(energy_total_wh());
+            ESP_LOGI(BL_TAG, "Restored energy counter: %" PRIu64 " Wh",
+                     energy_wh);
+        } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+            ESP_LOGW(BL_TAG, "Failed to read energy counter: %s",
+                     esp_err_to_name(err));
+        }
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGW(BL_TAG, "Failed to open energy NVS namespace: %s",
+                 esp_err_to_name(err));
+    }
+}
+
+static void energy_save_to_nvs(bool force) {
+    const int64_t now_us = esp_timer_get_time();
+    if (!force && last_energy_save_us != 0 &&
+        now_us - last_energy_save_us < ENERGY_NVS_SAVE_INTERVAL_US) {
+        return;
+    }
+
+    esp_err_t init_err = lifecycle_nvs_init();
+    if (init_err != ESP_OK) {
+        ESP_LOGW(BL_TAG, "NVS init failed for energy save: %s",
+                 esp_err_to_name(init_err));
+        return;
+    }
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(ENERGY_NVS_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(BL_TAG, "Failed to open energy NVS namespace: %s",
+                 esp_err_to_name(err));
+        return;
+    }
+
+    err = nvs_set_u64(handle, ENERGY_NVS_KEY_WH, energy_wh);
+    if (err == ESP_OK) {
+        err = nvs_commit(handle);
+    }
+    nvs_close(handle);
+
+    if (err != ESP_OK) {
+        ESP_LOGW(BL_TAG, "Failed to persist energy counter: %s",
+                 esp_err_to_name(err));
+        return;
+    }
+
+    last_energy_save_us = now_us;
 }
 
 static void pcnt_setup(pcnt_unit_handle_t *unit,
@@ -173,8 +252,17 @@ static void sample_timer_cb(void *arg) {
 
     hk_update_power(power_w);
 
-    energy_wh += (power_w * interval_s) / 3600.0f;
-    hk_update_energy(energy_wh);
+    const float delta_wh = (power_w * interval_s) / 3600.0f;
+    if (delta_wh > 0.0f) {
+        energy_wh_fraction += delta_wh;
+        if (energy_wh_fraction >= 1.0f) {
+            const uint64_t whole_wh = (uint64_t)energy_wh_fraction;
+            energy_wh += whole_wh;
+            energy_wh_fraction -= (float)whole_wh;
+        }
+    }
+    hk_update_energy(energy_total_wh());
+    energy_save_to_nvs(false);
 
 #if CONFIG_ESP_BL0937_CALIBRATION_LOG
     ESP_LOGI(BL_TAG,
@@ -230,6 +318,8 @@ void bl0937_init(void) {
              CONFIG_ESP_CF_PIN, CONFIG_ESP_CF1_PIN, CONFIG_ESP_SEL_PIN);
     ESP_LOGI(BL_TAG, "Calibration Hz/unit: W=%.3f V=%.3f A=%.3f",
              hz_per_unit_w(), hz_per_unit_v(), hz_per_unit_a());
+
+    energy_load_from_nvs();
 }
 
 void bl0937_start(void) {
@@ -255,4 +345,5 @@ void bl0937_stop(void) {
 
     esp_timer_stop(sample_timer);
     sampling_running = false;
+    energy_save_to_nvs(true);
 }
