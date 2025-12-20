@@ -27,10 +27,15 @@
 #include <limits.h>
 
 #include <driver/gpio.h>
-#include <driver/pcnt.h>
+#include <driver/pulse_cnt.h>
+#include <esp_idf_version.h>
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <sdkconfig.h>
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 4, 0)
+#error "ESP-IDF 5.4+ is required for the pulse_cnt driver API used by BL0937"
+#endif
 
 #define BL0937_SAMPLE_INTERVAL_MS 1000
 // Calibration values are provided via Kconfig (see ESP_BL0937_* options).
@@ -46,9 +51,16 @@ static float energy_wh = 0.0f;
 static bl0937_overcurrent_cb_t overcurrent_cb;
 static void *overcurrent_ctx;
 
+#if CONFIG_ESP_OVERCURRENT_ENABLE
 static int overcurrent_hits = 0;
 static int64_t overcurrent_block_until_us = 0;
+#endif
 static bool sampling_running = false;
+
+static pcnt_unit_handle_t pcnt_unit_cf;
+static pcnt_unit_handle_t pcnt_unit_cf1;
+static pcnt_channel_handle_t pcnt_channel_cf;
+static pcnt_channel_handle_t pcnt_channel_cf1;
 
 static inline float hz_per_unit_w(void) {
     return CONFIG_ESP_BL0937_CF_HZ_PER_W_X1000 / 1000.0f;
@@ -62,24 +74,29 @@ static inline float hz_per_unit_a(void) {
     return CONFIG_ESP_BL0937_CF1_HZ_PER_A_X1000 / 1000.0f;
 }
 
-static void pcnt_setup(pcnt_unit_t unit, gpio_num_t gpio) {
-    pcnt_config_t cfg = {
-        .pulse_gpio_num = gpio,
-        .ctrl_gpio_num = PCNT_PIN_NOT_USED,
-        .channel = PCNT_CHANNEL_0,
-        .unit = unit,
-        .pos_mode = PCNT_COUNT_INC,
-        .neg_mode = PCNT_COUNT_INC,
-        .lctrl_mode = PCNT_MODE_KEEP,
-        .hctrl_mode = PCNT_MODE_KEEP,
-        .counter_h_lim = INT16_MAX,
-        .counter_l_lim = 0,
+static void pcnt_setup(pcnt_unit_handle_t *unit,
+                       pcnt_channel_handle_t *channel,
+                       gpio_num_t gpio) {
+    pcnt_unit_config_t unit_cfg = {
+        .low_limit = 0,
+        .high_limit = INT16_MAX,
+    };
+    pcnt_chan_config_t chan_cfg = {
+        .edge_gpio_num = gpio,
+        .level_gpio_num = -1,
     };
 
-    ESP_ERROR_CHECK(pcnt_unit_config(&cfg));
-    ESP_ERROR_CHECK(pcnt_counter_pause(unit));
-    ESP_ERROR_CHECK(pcnt_counter_clear(unit));
-    ESP_ERROR_CHECK(pcnt_counter_resume(unit));
+    ESP_ERROR_CHECK(pcnt_new_unit(&unit_cfg, unit));
+    ESP_ERROR_CHECK(pcnt_new_channel(*unit, &chan_cfg, channel));
+    ESP_ERROR_CHECK(pcnt_channel_set_edge_action(
+        *channel, PCNT_CHANNEL_EDGE_ACTION_INCREASE,
+        PCNT_CHANNEL_EDGE_ACTION_INCREASE));
+    ESP_ERROR_CHECK(pcnt_channel_set_level_action(
+        *channel, PCNT_CHANNEL_LEVEL_ACTION_KEEP,
+        PCNT_CHANNEL_LEVEL_ACTION_KEEP));
+    ESP_ERROR_CHECK(pcnt_unit_enable(*unit));
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(*unit));
+    ESP_ERROR_CHECK(pcnt_unit_start(*unit));
 }
 
 static float freq_to_value(float freq_hz, float hz_per_unit) {
@@ -123,12 +140,12 @@ static void handle_overcurrent(float current_a) {
 static void sample_timer_cb(void *arg) {
     (void)arg;
 
-    int16_t cf_count = 0;
-    int16_t cf1_count = 0;
+    int cf_count = 0;
+    int cf1_count = 0;
     const float interval_s = BL0937_SAMPLE_INTERVAL_MS / 1000.0f;
 
-    pcnt_get_counter_value(PCNT_UNIT_0, &cf_count);
-    pcnt_get_counter_value(PCNT_UNIT_1, &cf1_count);
+    pcnt_unit_get_count(pcnt_unit_cf, &cf_count);
+    pcnt_unit_get_count(pcnt_unit_cf1, &cf1_count);
 
     if (cf_count < 0) {
         cf_count = 0;
@@ -137,8 +154,8 @@ static void sample_timer_cb(void *arg) {
         cf1_count = 0;
     }
 
-    pcnt_counter_clear(PCNT_UNIT_0);
-    pcnt_counter_clear(PCNT_UNIT_1);
+    pcnt_unit_clear_count(pcnt_unit_cf);
+    pcnt_unit_clear_count(pcnt_unit_cf1);
 
     const float cf_freq = cf_count / interval_s;
     const float cf1_freq = cf1_count / interval_s;
@@ -200,8 +217,8 @@ void bl0937_init(void) {
     sel_voltage = false;
     gpio_set_level(CONFIG_ESP_SEL_PIN, 0);
 
-    pcnt_setup(PCNT_UNIT_0, CONFIG_ESP_CF_PIN);
-    pcnt_setup(PCNT_UNIT_1, CONFIG_ESP_CF1_PIN);
+    pcnt_setup(&pcnt_unit_cf, &pcnt_channel_cf, CONFIG_ESP_CF_PIN);
+    pcnt_setup(&pcnt_unit_cf1, &pcnt_channel_cf1, CONFIG_ESP_CF1_PIN);
 
     esp_timer_create_args_t timer_args = {
         .callback = &sample_timer_cb,
