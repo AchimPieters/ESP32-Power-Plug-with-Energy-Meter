@@ -46,8 +46,44 @@ static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
 
+#define NVS_RELAY_NAMESPACE "relay"
+#define NVS_RELAY_KEY       "relay_on"
+
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
+
+static esp_err_t relay_store_state(bool on) {
+        nvs_handle_t handle;
+        esp_err_t err = nvs_open(NVS_RELAY_NAMESPACE, NVS_READWRITE, &handle);
+        if (err != ESP_OK) {
+                return err;
+        }
+
+        err = nvs_set_u8(handle, NVS_RELAY_KEY, on ? 1 : 0);
+        if (err == ESP_OK) {
+                err = nvs_commit(handle);
+        }
+
+        nvs_close(handle);
+        return err;
+}
+
+static esp_err_t relay_load_state(bool *out_on) {
+        nvs_handle_t handle;
+        esp_err_t err = nvs_open(NVS_RELAY_NAMESPACE, NVS_READONLY, &handle);
+        if (err != ESP_OK) {
+                return err;
+        }
+
+        uint8_t stored = 0;
+        err = nvs_get_u8(handle, NVS_RELAY_KEY, &stored);
+        if (err == ESP_OK) {
+                *out_on = stored != 0;
+        }
+
+        nvs_close(handle);
+        return err;
+}
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -76,6 +112,12 @@ static void relay_set_state(bool on, bool notify_homekit) {
         }
 
         relay_on = on;
+
+        esp_err_t store_err = relay_store_state(relay_on);
+        if (store_err != ESP_OK) {
+                ESP_LOGW(RELAY_TAG, "Failed to store relay state in NVS: %s",
+                         esp_err_to_name(store_err));
+        }
 
         // Hardware aansturen
         relay_write(relay_on);
@@ -116,11 +158,19 @@ void gpio_init(void) {
         gpio_reset_pin(RED_LED_GPIO);
         gpio_set_direction(RED_LED_GPIO, GPIO_MODE_OUTPUT);
 
-        // Initial state: alles uit, in sync brengen
-        relay_on = false;
-        relay_on_characteristic.value = HOMEKIT_BOOL(false);
-        relay_write(false);
-        blue_led_write(false);
+        bool stored_relay_on = false;
+        esp_err_t load_err = relay_load_state(&stored_relay_on);
+        if (load_err == ESP_ERR_NVS_NOT_FOUND) {
+                ESP_LOGI(RELAY_TAG, "No stored relay state; defaulting to OFF");
+        } else if (load_err != ESP_OK) {
+                ESP_LOGW(RELAY_TAG, "Failed to read relay state from NVS: %s",
+                         esp_err_to_name(load_err));
+        }
+
+        relay_on = stored_relay_on;
+        relay_on_characteristic.value = HOMEKIT_BOOL(relay_on);
+        relay_write(relay_on);
+        blue_led_write(relay_on);
 
         // Bij start is er nog geen WiFi -> rode LED AAN
         red_led_write(true);
