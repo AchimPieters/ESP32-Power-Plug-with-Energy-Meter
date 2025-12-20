@@ -168,14 +168,13 @@ static void sample_timer_cb(void *arg) {
     } else {
         last_current = freq_to_value(cf1_freq, hz_per_unit_a());
         hk_update_current(last_current);
+        handle_overcurrent(last_current);
     }
 
     hk_update_power(power_w);
 
     energy_wh += (power_w * interval_s) / 3600.0f;
     hk_update_energy(energy_wh);
-
-    handle_overcurrent(last_current);
 
 #if CONFIG_ESP_BL0937_CALIBRATION_LOG
     ESP_LOGI(BL_TAG,
