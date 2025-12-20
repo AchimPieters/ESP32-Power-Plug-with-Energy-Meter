@@ -35,12 +35,18 @@
 // -----------------------------------------------------------------------------
 // Characteristics (manual init — no macros, no override-init warnings)
 // -----------------------------------------------------------------------------
+static homekit_value_t hk_get_voltage(void);
+static homekit_value_t hk_get_current(void);
+static homekit_value_t hk_get_power(void);
+static homekit_value_t hk_get_energy(void);
+
 homekit_characteristic_t ch_voltage = {
     .type = UUID_VOLTAGE,
     .description = "Voltage (V)",
     .format = homekit_format_float,
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
     .value = HOMEKIT_FLOAT(0.0f),
+    .getter = hk_get_voltage,
 };
 
 homekit_characteristic_t ch_current = {
@@ -49,6 +55,7 @@ homekit_characteristic_t ch_current = {
     .format = homekit_format_float,
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
     .value = HOMEKIT_FLOAT(0.0f),
+    .getter = hk_get_current,
 };
 
 homekit_characteristic_t ch_power = {
@@ -57,6 +64,7 @@ homekit_characteristic_t ch_power = {
     .format = homekit_format_float,
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
     .value = HOMEKIT_FLOAT(0.0f),
+    .getter = hk_get_power,
 };
 
 homekit_characteristic_t ch_energy = {
@@ -65,6 +73,7 @@ homekit_characteristic_t ch_energy = {
     .format = homekit_format_float,
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify,
     .value = HOMEKIT_FLOAT(0.0f),
+    .getter = hk_get_energy,
 };
 
 // -----------------------------------------------------------------------------
@@ -76,6 +85,22 @@ static inline float sane_float(float x) {
 }
 
 static bool notifications_ready = false;
+
+static homekit_value_t hk_get_voltage(void) {
+    return ch_voltage.value;
+}
+
+static homekit_value_t hk_get_current(void) {
+    return ch_current.value;
+}
+
+static homekit_value_t hk_get_power(void) {
+    return ch_power.value;
+}
+
+static homekit_value_t hk_get_energy(void) {
+    return ch_energy.value;
+}
 
 void custom_characteristics_set_notify_ready(bool ready) {
     notifications_ready = ready;
