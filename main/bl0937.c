@@ -34,10 +34,10 @@
 
 #define BL0937_SAMPLE_INTERVAL_MS 1000
 
-// Calibration values (Hz per unit). Adjust after calibration.
-#define BL0937_CF_HZ_PER_W   1.0f
-#define BL0937_CF1_HZ_PER_V  1.0f
-#define BL0937_CF1_HZ_PER_A  1.0f
+// Calibration values (Hz per unit). Adjust via menuconfig defaults.
+#define BL0937_CF_HZ_PER_W   (CONFIG_ESP_BL0937_CF_HZ_PER_W_X1000 / 1000.0f)
+#define BL0937_CF1_HZ_PER_V  (CONFIG_ESP_BL0937_CF1_HZ_PER_V_X1000 / 1000.0f)
+#define BL0937_CF1_HZ_PER_A  (CONFIG_ESP_BL0937_CF1_HZ_PER_A_X1000 / 1000.0f)
 
 static const char *BL_TAG = "BL0937";
 
