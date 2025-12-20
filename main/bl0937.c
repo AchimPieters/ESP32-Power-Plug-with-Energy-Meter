@@ -30,6 +30,7 @@
 
 #include <driver/gpio.h>
 #include <driver/pulse_cnt.h>
+#include <esp_err.h>
 #include <esp_idf_version.h>
 #include <esp_log.h>
 #include <esp_timer.h>
@@ -223,8 +224,15 @@ static void sample_timer_cb(void *arg) {
     int cf1_count = 0;
     const float interval_s = BL0937_SAMPLE_INTERVAL_MS / 1000.0f;
 
-    pcnt_unit_get_count(pcnt_unit_cf, &cf_count);
-    pcnt_unit_get_count(pcnt_unit_cf1, &cf1_count);
+    esp_err_t cf_err = pcnt_unit_get_count(pcnt_unit_cf, &cf_count);
+    esp_err_t cf1_err = pcnt_unit_get_count(pcnt_unit_cf1, &cf1_count);
+    if (cf_err != ESP_OK || cf1_err != ESP_OK) {
+        ESP_LOGW(BL_TAG,
+                 "Skipping sample due to pcnt read error (CF=%s CF1=%s)",
+                 esp_err_to_name(cf_err),
+                 esp_err_to_name(cf1_err));
+        return;
+    }
 
     if (cf_count < 0) {
         cf_count = 0;
