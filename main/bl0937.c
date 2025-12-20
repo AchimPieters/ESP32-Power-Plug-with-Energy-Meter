@@ -78,7 +78,7 @@ static void pcnt_setup(pcnt_unit_handle_t *unit,
                        pcnt_channel_handle_t *channel,
                        gpio_num_t gpio) {
     pcnt_unit_config_t unit_cfg = {
-        .low_limit = 0,
+        .low_limit = INT16_MIN,
         .high_limit = INT16_MAX,
     };
     pcnt_chan_config_t chan_cfg = {
