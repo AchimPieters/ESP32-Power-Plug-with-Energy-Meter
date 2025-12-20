@@ -39,20 +39,10 @@
 #define RELAY_GPIO       CONFIG_ESP_RELAY_GPIO
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
 #define RED_LED_GPIO     CONFIG_ESP_RED_LED_GPIO   // Rode LED: WiFi/lifecycle-indicator
-#define CF_GPIO          CONFIG_ESP_CF_PIN
-#define CF1_GPIO         CONFIG_ESP_CF1_PIN
-#define SEL_GPIO         CONFIG_ESP_SEL_PIN
-
-#if CONFIG_ESP_OVERCURRENT_ENABLE
-#define OVERCURRENT_A_X1000         CONFIG_ESP_OVERCURRENT_A_X1000
-#define OVERCURRENT_DEBOUNCE_SAMPLES CONFIG_ESP_OVERCURRENT_DEBOUNCE_SAMPLES
-#define OVERCURRENT_COOLDOWN_MS     CONFIG_ESP_OVERCURRENT_COOLDOWN_MS
-#endif
 
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
-static const char *CONFIG_TAG  = "CONFIG";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
@@ -123,20 +113,6 @@ void gpio_init(void) {
 
         // Bij start is er nog geen WiFi -> rode LED AAN
         red_led_write(true);
-}
-
-static void log_kconfig_settings(void) {
-        ESP_LOGI(CONFIG_TAG, "GPIO relay=%d blue_led=%d red_led=%d button=%d",
-                 RELAY_GPIO, BLUE_LED_GPIO, RED_LED_GPIO, BUTTON_GPIO);
-        ESP_LOGI(CONFIG_TAG, "GPIO cf=%d cf1=%d sel=%d (BL0937 wiring only, driver later)",
-                 CF_GPIO, CF1_GPIO, SEL_GPIO);
-
-#if CONFIG_ESP_OVERCURRENT_ENABLE
-        ESP_LOGI(CONFIG_TAG, "Overcurrent enabled: threshold=%d mA debounce=%d cooldown=%d ms",
-                 OVERCURRENT_A_X1000, OVERCURRENT_DEBOUNCE_SAMPLES, OVERCURRENT_COOLDOWN_MS);
-#else
-        ESP_LOGI(CONFIG_TAG, "Overcurrent disabled");
-#endif
 }
 
 // ---------- Accessory identification (Blue LED) ----------
@@ -292,7 +268,6 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
-        log_kconfig_settings();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
