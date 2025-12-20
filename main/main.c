@@ -32,6 +32,7 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+#include "bl0937.h"
 #include "custom_characteristics.h"
 #include <button.h>
 
@@ -90,6 +91,13 @@ static void relay_set_state(bool on, bool notify_homekit) {
                 homekit_characteristic_notify(&relay_on_characteristic,
                                               relay_on_characteristic.value);
         }
+}
+
+static void handle_overcurrent(void *ctx, float current_a) {
+        (void)ctx;
+
+        ESP_LOGW("BL0937", "Overcurrent %.3fA detected; turning relay OFF", current_a);
+        relay_set_state(false, true);
 }
 
 // All GPIO Settings
@@ -275,6 +283,11 @@ void app_main(void) {
         custom_characteristics_init();
 
         gpio_init();
+        bl0937_init();
+#if CONFIG_ESP_OVERCURRENT_ENABLE
+        bl0937_set_overcurrent_callback(handle_overcurrent, NULL);
+#endif
+        bl0937_start();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
