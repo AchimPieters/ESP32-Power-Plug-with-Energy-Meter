@@ -37,4 +37,76 @@ menu "StudioPieters"
               help
                    If you want to change the HomeKit Setup ID, you can do that here (Note: you need to make a new QR-CODE To make it work)
 
+      config BL0937_CF_GPIO
+              int "BL0937 CF GPIO (power pulse)"
+              default 5
+              help
+                  GPIO for the BL0937 CF pin (power pulse output).
+
+      config BL0937_CF1_GPIO
+              int "BL0937 CF1 GPIO (voltage/current pulse)"
+              default 14
+              help
+                  GPIO for the BL0937 CF1 pin (voltage/current pulse output).
+
+      config BL0937_SEL_GPIO
+              int "BL0937 SEL GPIO"
+              default 12
+              help
+                  GPIO for the BL0937 SEL pin (selects voltage or current output on CF1).
+
+      config BL0937_SEL_INVERTED
+              bool "Invert BL0937 SEL logic"
+              default y
+              help
+                  Some boards invert the SEL logic (0 = voltage, 1 = current). Enable when wiring uses inverted logic.
+
+      config BL0937_POWER_RATIO
+              int "BL0937 power ratio"
+              default 1362
+              help
+                  Power ratio constant for BL0937 (HJL-01 compatible). Adjust to calibrate W readings.
+
+      config BL0937_VOLTAGE_RATIO
+              int "BL0937 voltage ratio"
+              default 822
+              help
+                  Voltage ratio constant for BL0937 (HJL-01 compatible). Adjust to calibrate V readings.
+
+      config BL0937_CURRENT_RATIO
+              int "BL0937 current ratio"
+              default 3300
+              help
+                  Current ratio constant for BL0937 (HJL-01 compatible). Adjust to calibrate A readings.
+
+      config BL0937_POWER_CALIBRATION
+              int "BL0937 power calibration"
+              default 1
+              help
+                  Additional calibration multiplier for power (1 = no change).
+
+      config BL0937_VOLTAGE_CALIBRATION
+              int "BL0937 voltage calibration"
+              default 1
+              help
+                  Additional calibration multiplier for voltage (1 = no change).
+
+      config BL0937_CURRENT_CALIBRATION
+              int "BL0937 current calibration"
+              default 1
+              help
+                  Additional calibration multiplier for current (1 = no change).
+
+      config BL0937_PULSES_PER_KWH
+              int "BL0937 pulses per kWh"
+              default 1000
+              help
+                  Number of CF pulses per kWh. Adjust to calibrate energy readings.
+
+      config BL0937_UPDATE_INTERVAL_MS
+              int "BL0937 update interval (ms)"
+              default 200
+              help
+                  Update interval for BL0937 sampling task in milliseconds.
+
 endmenu
