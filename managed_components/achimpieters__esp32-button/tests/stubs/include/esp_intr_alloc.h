@@ -1,6 +1,0 @@
-#ifndef ESP_INTR_ALLOC_H
-#define ESP_INTR_ALLOC_H
-
-#define ESP_INTR_FLAG_LOWMED 0
-
-#endif // ESP_INTR_ALLOC_H
