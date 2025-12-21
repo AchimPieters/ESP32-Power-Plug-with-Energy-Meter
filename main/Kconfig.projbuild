@@ -1,49 +1,66 @@
 menu "StudioPieters"
 
+    config ESP_RELAY_GPIO
+        int "Set the GPIO for the Relay"
+        range 0 39
+        default 16
+        help
+            The GPIO number the Relay is connected to.
 
-      config ESP_RELAY_GPIO
-              int "Set the GPIO for the Relay"
-              default 16
-              help
-                  The GPIO number the Relay is connected to.
+    config ESP_BLUE_LED_GPIO
+        int "Set the GPIO for the blue LED"
+        range 0 39
+        default 2
+        help
+            The GPIO number the blue LED is connected to.
 
-      config ESP_BLUE_LED_GPIO
-              int "Set the GPIO for the blue LED"
-              default 2
-              help
-                  The GPIO number the blue LED is connected to.
+    config ESP_RED_LED_GPIO
+        int "Set the GPIO for the red LED"
+        range 0 39
+        default 4
+        help
+            The GPIO number the red LED is connected to.
 
-      config ESP_RED_LED_GPIO
-              int "Set the GPIO for the red LED"
-              default 4
-              help
-                  The GPIO number the red LED is connected to.
+    config ESP_BUTTON_GPIO
+        int "Button GPIO"
+        range 0 39
+        default 13
+        help
+            GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
 
-      config ESP_BUTTON_GPIO
-              int "Button GPIO"
-              default 13
-              help
-                  GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
+    config BL0937_GPIO_CF
+        int "BL0937 CF GPIO"
+        range 0 39
+        default 18
+        help
+            GPIO connected to the BL0937 CF pin (power pulse output).
 
-      config BL0937_GPIO_CF
-              default 18
+    config BL0937_GPIO_CF1
+        int "BL0937 CF1 GPIO"
+        range 0 39
+        default 19
+        help
+            GPIO connected to the BL0937 CF1 pin (current/voltage pulse output).
 
-      config BL0937_GPIO_CF1
-              default 19
+    config BL0937_GPIO_SEL
+        int "BL0937 SEL GPIO"
+        range 0 39
+        default 21
+        help
+            GPIO connected to the BL0937 SEL pin (selects CF1 function).
 
-      config BL0937_GPIO_SEL
-              default 21
+    config ESP_SETUP_CODE
+        string "HomeKit Setup Code"
+        default "693-41-208"
+        help
+            If you want to change the HomeKit Setup Code, you can do that here.
+            Note: you need to make a new QR-CODE to make it work.
 
-      config ESP_SETUP_CODE
-              string "HomeKit Setup Code"
-              default "693-41-208"
-              help
-                  If you want to change the HomeKit Setup Code, you can do that here (Note:  you need to make a new QR-CODE To make it work)
-
-      config ESP_SETUP_ID
-              string "HomeKit Setup ID"
-              default "M4T8"
-              help
-                   If you want to change the HomeKit Setup ID, you can do that here (Note: you need to make a new QR-CODE To make it work)
+    config ESP_SETUP_ID
+        string "HomeKit Setup ID"
+        default "M4T8"
+        help
+            If you want to change the HomeKit Setup ID, you can do that here.
+            Note: you need to make a new QR-CODE to make it work.
 
 endmenu

@@ -1,0 +1,28 @@
+info: INFO: Symbol BL0937_GPIO_CF defined in multiple locations (see below). Please check if this is a correct behavior or a random name match:
+    /project/main/Kconfig.projbuild:28
+    /project/managed_components/achimpieters__esp32-bl0937/Kconfig:9
+info: INFO: Symbol BL0937_GPIO_CF1 defined in multiple locations (see below). Please check if this is a correct behavior or a random name match:
+    /project/managed_components/achimpieters__esp32-bl0937/Kconfig:16
+    /project/main/Kconfig.projbuild:31
+info: INFO: Symbol BL0937_GPIO_SEL defined in multiple locations (see below). Please check if this is a correct behavior or a random name match:
+    /project/main/Kconfig.projbuild:34
+    /project/managed_components/achimpieters__esp32-bl0937/Kconfig:23
+CMake Error at /opt/esp/idf/tools/cmake/component.cmake:490 (add_library):
+  Cannot find source file:
+
+    /project/managed_components/achimpieters__esp32-bl0937/src/bl0937.c
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .cu .mpp .m .M .mm .ixx .cppm
+  .ccm .cxxm .c++m .h .hh .h++ .hm .hpp .hxx .in .txx .f .F .for .f77 .f90
+  .f95 .f03 .hip .ispc
+Call Stack (most recent call first):
+  managed_components/achimpieters__esp32-bl0937/CMakeLists.txt:3 (idf_component_register)
+
+
+CMake Error at /opt/esp/idf/tools/cmake/component.cmake:490 (add_library):
+  No SOURCES given to target: __idf_achimpieters__esp32-bl0937
+Call Stack (most recent call first):
+  managed_components/achimpieters__esp32-bl0937/CMakeLists.txt:3 (idf_component_register)
+
+
+CMake Generate step failed.  Build files cannot be regenerated correctly.
