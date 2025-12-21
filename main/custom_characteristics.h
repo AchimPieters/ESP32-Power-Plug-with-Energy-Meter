@@ -26,6 +26,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <stddef.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
