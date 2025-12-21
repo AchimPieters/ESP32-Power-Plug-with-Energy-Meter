@@ -32,6 +32,8 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+#include "custom_characteristics.h"
+#include "BL0937.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -46,6 +48,7 @@ static const char *IDENT_TAG   = "IDENT";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
+static bool homekit_started = false;
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -157,6 +160,10 @@ homekit_characteristic_t serial = HOMEKIT_CHARACTERISTIC_(SERIAL_NUMBER, DEVICE_
 homekit_characteristic_t model = HOMEKIT_CHARACTERISTIC_(MODEL, DEVICE_MODEL);
 homekit_characteristic_t revision = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION, LIFECYCLE_DEFAULT_FW_VERSION);
 homekit_characteristic_t ota_trigger = API_OTA_TRIGGER;
+homekit_characteristic_t voltage_characteristic = HOMEKIT_CHARACTERISTIC_(CUSTOM_VOLTAGE, 0.0f);
+homekit_characteristic_t current_characteristic = HOMEKIT_CHARACTERISTIC_(CUSTOM_CURRENT, 0.0f);
+homekit_characteristic_t power_characteristic = HOMEKIT_CHARACTERISTIC_(CUSTOM_POWER, 0.0f);
+homekit_characteristic_t energy_characteristic = HOMEKIT_CHARACTERISTIC_(CUSTOM_ENERGY, 0.0f);
 
 // Getter: HomeKit vraagt huidige toestand op
 homekit_value_t relay_on_get() {
@@ -202,6 +209,14 @@ homekit_accessory_t *accessories[] = {
                         &ota_trigger,
                         NULL
                 }),
+                HOMEKIT_SERVICE(CUSTOM_POWER_METER, .characteristics = (homekit_characteristic_t *[]) {
+                        HOMEKIT_CHARACTERISTIC(NAME, "Energy Meter"),
+                        &voltage_characteristic,
+                        &current_characteristic,
+                        &power_characteristic,
+                        &energy_characteristic,
+                        NULL
+                }),
                 NULL
         }),
         NULL
@@ -245,8 +260,6 @@ void button_callback(button_event_t event, void *context) {
 // ---------- Wi-Fi / HomeKit startup ----------
 
 void on_wifi_ready() {
-        static bool homekit_started = false;
-
         // WiFi is nu up -> rode LED uit
         red_led_write(false);
 
@@ -260,6 +273,19 @@ void on_wifi_ready() {
         homekit_started = true;
 }
 
+// ---------- BL0937 / Energy meter ----------
+
+static void bl0937_update_callback(const bl0937_reading_t *reading, void *context) {
+        (void)context;
+
+        bool notify = homekit_started;
+
+        custom_characteristic_update_float(&voltage_characteristic, reading->voltage, notify);
+        custom_characteristic_update_float(&current_characteristic, reading->current, notify);
+        custom_characteristic_update_float(&power_characteristic, reading->power, notify);
+        custom_characteristic_update_float(&energy_characteristic, reading->energy, notify);
+}
+
 // ---------- app_main ----------
 
 void app_main(void) {
@@ -268,6 +294,30 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
+
+        bl0937_config_t bl0937_config = {
+                .cf_gpio = CONFIG_BL0937_CF_GPIO,
+                .cf1_gpio = CONFIG_BL0937_CF1_GPIO,
+                .sel_gpio = CONFIG_BL0937_SEL_GPIO,
+                .sel_inverted = CONFIG_BL0937_SEL_INVERTED,
+                .power_ratio = CONFIG_BL0937_POWER_RATIO,
+                .voltage_ratio = CONFIG_BL0937_VOLTAGE_RATIO,
+                .current_ratio = CONFIG_BL0937_CURRENT_RATIO,
+                .power_calibration = CONFIG_BL0937_POWER_CALIBRATION,
+                .voltage_calibration = CONFIG_BL0937_VOLTAGE_CALIBRATION,
+                .current_calibration = CONFIG_BL0937_CURRENT_CALIBRATION,
+                .pulses_per_kwh = CONFIG_BL0937_PULSES_PER_KWH,
+                .update_interval_ms = CONFIG_BL0937_UPDATE_INTERVAL_MS,
+        };
+
+        if (bl0937_init(&bl0937_config) == ESP_OK) {
+                esp_err_t bl0937_err = bl0937_start(bl0937_update_callback, NULL);
+                if (bl0937_err != ESP_OK) {
+                        ESP_LOGE("BL0937", "Failed to start BL0937 task: %s", esp_err_to_name(bl0937_err));
+                }
+        } else {
+                ESP_LOGE("BL0937", "Failed to initialize BL0937 driver");
+        }
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
