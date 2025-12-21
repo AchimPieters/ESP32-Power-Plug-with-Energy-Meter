@@ -156,6 +156,10 @@ static homekit_value_t hk_get_energy(void) {
 }
 
 static void notify_mark_pending(hk_notify_state_t *state, float value) {
+    if (!notifications_ready) {
+        return;
+    }
+
     const float delta = fabsf(value - state->last_notified_value);
     if (delta >= state->threshold) {
         state->pending_value = value;
@@ -223,8 +227,19 @@ void custom_characteristics_set_notify_ready(bool ready) {
     }
 
     notifications_ready = ready;
+    const int64_t now_ms = esp_timer_get_time() / 1000;
+
+    notify_voltage.pending = false;
+    notify_current.pending = false;
+    notify_power.pending = false;
+    notify_energy.pending = false;
+
     if (ready) {
-        const int64_t now_ms = esp_timer_get_time() / 1000;
+        notify_voltage.last_notified_value = ch_voltage.value.float_value;
+        notify_current.last_notified_value = ch_current.value.float_value;
+        notify_power.last_notified_value = ch_power.value.float_value;
+        notify_energy.last_notified_value = ch_energy.value.float_value;
+
         notify_voltage.last_notified_ms = now_ms;
         notify_current.last_notified_ms = now_ms;
         notify_power.last_notified_ms = now_ms;
