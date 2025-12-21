@@ -22,6 +22,7 @@
  **/
 
 #include <stdio.h>
+#include <math.h>
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
@@ -32,6 +33,8 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+#include "BL0937.h"
+#include "custom_characteristics.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -43,6 +46,7 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
+static const char *ENERGY_TAG  = "ENERGY";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
@@ -176,9 +180,37 @@ void relay_on_set(homekit_value_t value) {
         relay_set_state(new_state, false);
 }
 
+homekit_value_t overcurrent_protection_get() {
+        return HOMEKIT_BOOL(bl0937_get_overcurrent_enabled());
+}
+
+void overcurrent_protection_set(homekit_value_t value) {
+        if (value.format != homekit_format_bool) {
+                ESP_LOGE(ENERGY_TAG, "Invalid value format: %d", value.format);
+                return;
+        }
+
+        bool enabled = value.bool_value;
+        bl0937_set_overcurrent_enabled(enabled);
+        ESP_LOGI(ENERGY_TAG, "Overcurrent protection -> %s", enabled ? "ENABLED" : "DISABLED");
+}
+
 // We keep a handle to ON characteristic so we can notify on button presses
 homekit_characteristic_t relay_on_characteristic =
         HOMEKIT_CHARACTERISTIC_(ON, false, .getter = relay_on_get, .setter = relay_on_set);
+
+homekit_characteristic_t voltage =
+        HOMEKIT_CHARACTERISTIC_(CUSTOM_VOLTAGE, 0.0f);
+homekit_characteristic_t current =
+        HOMEKIT_CHARACTERISTIC_(CUSTOM_CURRENT, 0.0f);
+homekit_characteristic_t power =
+        HOMEKIT_CHARACTERISTIC_(CUSTOM_POWER, 0.0f);
+homekit_characteristic_t total_kwh =
+        HOMEKIT_CHARACTERISTIC_(CUSTOM_TOTAL_KWH, 0.0f);
+homekit_characteristic_t overcurrent_protection =
+        HOMEKIT_CHARACTERISTIC_(CUSTOM_OVERCURRENT_PROTECTION, true,
+                                .getter = overcurrent_protection_get,
+                                .setter = overcurrent_protection_set);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
@@ -200,6 +232,15 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &ota_trigger,
+                        NULL
+                }),
+                HOMEKIT_SERVICE_(CUSTOM_ENERGY_METER, .characteristics = (homekit_characteristic_t *[]) {
+                        HOMEKIT_CHARACTERISTIC(NAME, "Energy Meter"),
+                        &voltage,
+                        &current,
+                        &power,
+                        &total_kwh,
+                        &overcurrent_protection,
                         NULL
                 }),
                 NULL
@@ -242,6 +283,51 @@ void button_callback(button_event_t event, void *context) {
         }
 }
 
+static void energy_overcurrent_callback(float current_amps, void *context) {
+        (void)context;
+        ESP_LOGW(ENERGY_TAG, "Overcurrent detected: %.2f A", current_amps);
+        relay_set_state(false, true);
+}
+
+static void energy_update_task(void *args) {
+        (void)args;
+        bl0937_reading_t reading = {0};
+        float last_voltage = -1.0f;
+        float last_current = -1.0f;
+        float last_power = -1.0f;
+        float last_kwh = -1.0f;
+
+        while (true) {
+                if (bl0937_get_reading(&reading) == ESP_OK) {
+                        if (last_voltage < 0.0f || fabsf(reading.voltage - last_voltage) >= 0.1f) {
+                                voltage.value = HOMEKIT_FLOAT(reading.voltage);
+                                homekit_characteristic_notify(&voltage, voltage.value);
+                                last_voltage = reading.voltage;
+                        }
+
+                        if (last_current < 0.0f || fabsf(reading.current - last_current) >= 0.01f) {
+                                current.value = HOMEKIT_FLOAT(reading.current);
+                                homekit_characteristic_notify(&current, current.value);
+                                last_current = reading.current;
+                        }
+
+                        if (last_power < 0.0f || fabsf(reading.power - last_power) >= 0.5f) {
+                                power.value = HOMEKIT_FLOAT(reading.power);
+                                homekit_characteristic_notify(&power, power.value);
+                                last_power = reading.power;
+                        }
+
+                        if (last_kwh < 0.0f || fabsf(reading.total_kwh - last_kwh) >= 0.001f) {
+                                total_kwh.value = HOMEKIT_FLOAT(reading.total_kwh);
+                                homekit_characteristic_notify(&total_kwh, total_kwh.value);
+                                last_kwh = reading.total_kwh;
+                        }
+                }
+
+                vTaskDelay(pdMS_TO_TICKS(CONFIG_BL0937_UPDATE_INTERVAL_MS));
+        }
+}
+
 // ---------- Wi-Fi / HomeKit startup ----------
 
 void on_wifi_ready() {
@@ -268,6 +354,16 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
+
+        custom_characteristics_set_defaults(&voltage, &current, &power, &total_kwh);
+
+        esp_err_t bl_err = bl0937_init_default();
+        if (bl_err == ESP_OK) {
+                bl0937_register_overcurrent_callback(energy_overcurrent_callback, NULL);
+                xTaskCreate(energy_update_task, "energy_update", 4096, NULL, 4, NULL);
+        } else {
+                ESP_LOGE(ENERGY_TAG, "Failed to init BL0937: %s", esp_err_to_name(bl_err));
+        }
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
