@@ -45,12 +45,38 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
+static const char *HOMEKIT_TAG = "HOMEKIT";
 
 #define NVS_RELAY_NAMESPACE "relay"
 #define NVS_RELAY_KEY       "relay_on"
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
+static int verified_clients = 0;
+
+static void homekit_event_handler(homekit_event_t event) {
+        switch (event) {
+        case HOMEKIT_EVENT_CLIENT_VERIFIED:
+                verified_clients++;
+                ESP_LOGI(HOMEKIT_TAG, "Client verified (sessions=%d)", verified_clients);
+                break;
+        case HOMEKIT_EVENT_CLIENT_DISCONNECTED:
+                if (verified_clients > 0) {
+                        verified_clients--;
+                }
+                ESP_LOGI(HOMEKIT_TAG, "Client disconnected (sessions=%d)", verified_clients);
+                break;
+        case HOMEKIT_EVENT_PAIRING_REMOVED:
+                verified_clients = 0;
+                ESP_LOGI(HOMEKIT_TAG, "Pairing removed; clearing sessions");
+                break;
+        default:
+                break;
+        }
+
+        const bool notify_ready = homekit_is_paired() && verified_clients > 0;
+        custom_characteristics_set_notify_ready(notify_ready);
+}
 
 static esp_err_t relay_store_state(bool on) {
         nvs_handle_t handle;
@@ -277,6 +303,7 @@ homekit_server_config_t config = {
         .accessories = accessories,
         .password = CONFIG_ESP_SETUP_CODE,
         .setupId = CONFIG_ESP_SETUP_ID,
+        .on_event = homekit_event_handler,
 };
 
 // ---------- Button handling ----------
@@ -322,7 +349,6 @@ void on_wifi_ready() {
 
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
-        custom_characteristics_set_notify_ready(true);
         homekit_started = true;
 }
 
