@@ -48,7 +48,7 @@ Prerequisites are declared in `main/idf_component.yml`:
 Typical workflow:
 
 ```bash
-idf.py set-target esp32          # or your specific target
+idf.py set-target esp32c3        # or your specific target
 idf.py menuconfig              # set GPIOs and HomeKit setup credentials
 idf.py build
 idf.py flash monitor

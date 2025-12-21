@@ -1,95 +1,27 @@
 menu "StudioPieters"
 
-      config ESP_CF_PIN
-              int "BL0937 CF GPIO"
-              default 14
-              help
-                  GPIO number connected to the BL0937 CF (power) output.
-
-      config ESP_CF1_PIN
-              int "BL0937 CF1 GPIO"
-              default 27
-              help
-                  GPIO number connected to the BL0937 CF1 (voltage/current) output.
-
-      config ESP_SEL_PIN
-              int "BL0937 SEL GPIO"
-              default 26
-              help
-                  GPIO number connected to the BL0937 SEL pin.
-
-      config ESP_BL0937_CF_HZ_PER_W_X1000
-              int "BL0937 CF Hz per W (x1000)"
-              default 1000
-              help
-                  Calibration factor for CF output in Hz per Watt, scaled by 1000.
-
-      config ESP_BL0937_CF1_HZ_PER_V_X1000
-              int "BL0937 CF1 Hz per V (x1000)"
-              default 1000
-              help
-                  Calibration factor for CF1 output in Hz per Volt, scaled by 1000.
-
-      config ESP_BL0937_CF1_HZ_PER_A_X1000
-              int "BL0937 CF1 Hz per A (x1000)"
-              default 1000
-              help
-                  Calibration factor for CF1 output in Hz per Amp, scaled by 1000.
-
-      config ESP_BL0937_CALIBRATION_LOG
-              bool "Log BL0937 calibration samples"
-              default n
-              help
-                  Enable logging of BL0937 calibration samples.
-
-      config ESP_OVERCURRENT_ENABLE
-              bool "Enable overcurrent protection"
-              default n
-              help
-                  Enable relay shutoff when the measured current exceeds the configured threshold.
-
-      config ESP_OVERCURRENT_A_X1000
-              int "Overcurrent threshold in A (x1000)"
-              default 10000
-              depends on ESP_OVERCURRENT_ENABLE
-              help
-                  Threshold in amps (scaled by 1000) above which the relay is disabled.
-
-      config ESP_OVERCURRENT_DEBOUNCE_SAMPLES
-              int "Overcurrent debounce samples"
-              default 3
-              depends on ESP_OVERCURRENT_ENABLE
-              help
-                  Number of consecutive samples above the threshold required to trigger shutdown.
-
-      config ESP_OVERCURRENT_COOLDOWN_MS
-              int "Overcurrent cooldown time (ms)"
-              default 5000
-              depends on ESP_OVERCURRENT_ENABLE
-              help
-                  Cooldown time after a shutdown before overcurrent detection can trigger again.
 
       config ESP_RELAY_GPIO
               int "Set the GPIO for the Relay"
-              default 23
+              default 3
               help
                   The GPIO number the Relay is connected to.
 
       config ESP_BLUE_LED_GPIO
               int "Set the GPIO for the blue LED"
-              default 2
+              default 4
               help
                   The GPIO number the blue LED is connected to.
 
       config ESP_RED_LED_GPIO
               int "Set the GPIO for the red LED"
-              default 4
+              default 6
               help
                   The GPIO number the red LED is connected to.
 
       config ESP_BUTTON_GPIO
               int "Button GPIO"
-              default 13
+              default 7
               help
                   GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
 
