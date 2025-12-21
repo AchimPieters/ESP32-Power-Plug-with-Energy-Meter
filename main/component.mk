@@ -1,1 +1,1 @@
-COMPONENT_DEPENDS = homekit esp32-bl0937
+COMPONENT_DEPENDS = homekit

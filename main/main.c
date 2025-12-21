@@ -32,9 +32,7 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
-#include "custom_characteristics.h"
 #include <button.h>
-#include <bl0937.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
 #define BUTTON_GPIO      CONFIG_ESP_BUTTON_GPIO
@@ -45,12 +43,9 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
-static const char *ENERGY_TAG  = "ENERGY";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
-
-static void energy_meter_task(void *args);
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -70,21 +65,6 @@ static inline void red_led_write(bool on) {
 
 // Forward declaration van de characteristic zodat we hem in functies kunnen gebruiken
 extern homekit_characteristic_t relay_on_characteristic;
-extern homekit_characteristic_t outlet_in_use_characteristic;
-
-static void outlet_in_use_set(bool in_use, bool notify_homekit) {
-        bool current_state = outlet_in_use_characteristic.value.bool_value;
-
-        if (current_state == in_use) {
-                return;
-        }
-
-        outlet_in_use_characteristic.value = HOMEKIT_BOOL(in_use);
-        if (notify_homekit) {
-                homekit_characteristic_notify(&outlet_in_use_characteristic,
-                                              outlet_in_use_characteristic.value);
-        }
-}
 
 // Centrale functie: zet state, stuurt hardware aan en (optioneel) HomeKit-notify
 static void relay_set_state(bool on, bool notify_homekit) {
@@ -103,9 +83,6 @@ static void relay_set_state(bool on, bool notify_homekit) {
 
         // HomeKit characteristic-snapshot updaten
         relay_on_characteristic.value = HOMEKIT_BOOL(relay_on);
-        if (!relay_on) {
-                outlet_in_use_set(false, notify_homekit);
-        }
 
         // Eventueel HomeKit-clients informeren
         if (notify_homekit) {
@@ -131,7 +108,6 @@ void gpio_init(void) {
         // Initial state: alles uit, in sync brengen
         relay_on = false;
         relay_on_characteristic.value = HOMEKIT_BOOL(false);
-        outlet_in_use_characteristic.value = HOMEKIT_BOOL(false);
         relay_write(false);
         blue_led_write(false);
 
@@ -203,21 +179,6 @@ void relay_on_set(homekit_value_t value) {
 // We keep a handle to ON characteristic so we can notify on button presses
 homekit_characteristic_t relay_on_characteristic =
         HOMEKIT_CHARACTERISTIC_(ON, false, .getter = relay_on_get, .setter = relay_on_set);
-homekit_characteristic_t outlet_in_use_characteristic =
-        HOMEKIT_CHARACTERISTIC_(OUTLET_IN_USE, false);
-homekit_characteristic_t voltage_characteristic = HOMEKIT_CHARACTERISTIC_CUSTOM_VOLTAGE(0);
-homekit_characteristic_t current_characteristic = HOMEKIT_CHARACTERISTIC_CUSTOM_CURRENT(0);
-homekit_characteristic_t power_characteristic = HOMEKIT_CHARACTERISTIC_CUSTOM_POWER(0);
-homekit_characteristic_t energy_characteristic = HOMEKIT_CHARACTERISTIC_CUSTOM_ENERGY(0);
-homekit_characteristic_t power_factor_characteristic = HOMEKIT_CHARACTERISTIC_CUSTOM_POWER_FACTOR(0);
-
-static const bl0937_characteristics_t bl0937_characteristics = {
-        .voltage = &voltage_characteristic,
-        .current = &current_characteristic,
-        .power = &power_characteristic,
-        .energy = &energy_characteristic,
-        .power_factor = &power_factor_characteristic,
-};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
@@ -238,17 +199,7 @@ homekit_accessory_t *accessories[] = {
                 HOMEKIT_SERVICE(OUTLET, .primary = true, .characteristics = (homekit_characteristic_t *[]) {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
-                        &outlet_in_use_characteristic,
                         &ota_trigger,
-                        NULL
-                }),
-                HOMEKIT_SERVICE(CUSTOM_ENERGY_METER, .characteristics = (homekit_characteristic_t *[]) {
-                        HOMEKIT_CHARACTERISTIC(NAME, "Energy Meter"),
-                        &voltage_characteristic,
-                        &current_characteristic,
-                        &power_characteristic,
-                        &energy_characteristic,
-                        &power_factor_characteristic,
                         NULL
                 }),
                 NULL
@@ -291,44 +242,10 @@ void button_callback(button_event_t event, void *context) {
         }
 }
 
-// ---------- Energy meter task ----------
-
-static void energy_meter_task(void *args) {
-        (void)args;
-
-        bl0937_init_default();
-
-        while (1) {
-                float voltage = bl0937_voltage();
-                float current = bl0937_current();
-                float power = bl0937_power();
-                float energy_wh = bl0937_energy_wh();
-                float power_factor = bl0937_power_factor();
-
-                bl0937_characteristics_update(&bl0937_characteristics,
-                                              voltage,
-                                              current,
-                                              power,
-                                              energy_wh,
-                                              power_factor,
-                                              true);
-
-                if (relay_on) {
-                        outlet_in_use_set(power > 1.0f, true);
-                }
-
-                ESP_LOGD(ENERGY_TAG, "V=%.1fV I=%.3fA P=%.1fW E=%.1fWh PF=%.2f",
-                         voltage, current, power, energy_wh, power_factor);
-
-                vTaskDelay(pdMS_TO_TICKS(2000));
-        }
-}
-
 // ---------- Wi-Fi / HomeKit startup ----------
 
 void on_wifi_ready() {
         static bool homekit_started = false;
-        static bool energy_task_started = false;
 
         // WiFi is nu up -> rode LED uit
         red_led_write(false);
@@ -341,11 +258,6 @@ void on_wifi_ready() {
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
         homekit_started = true;
-
-        if (!energy_task_started) {
-                xTaskCreate(energy_meter_task, "energy_meter", 4096, NULL, 4, NULL);
-                energy_task_started = true;
-        }
 }
 
 // ---------- app_main ----------
