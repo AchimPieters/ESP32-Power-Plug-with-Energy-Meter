@@ -34,18 +34,11 @@
 #include "esp32-lcm.h"
 #include <button.h>
 
-#include "BL0937.h"
-#include "custom_characteristics.h"
-
 // -------- GPIO configuration (set these in sdkconfig) --------
 #define BUTTON_GPIO      CONFIG_ESP_BUTTON_GPIO
 #define RELAY_GPIO       CONFIG_ESP_RELAY_GPIO
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
 #define RED_LED_GPIO     CONFIG_ESP_RED_LED_GPIO   // Rode LED: WiFi/lifecycle-indicator
-
-#define BL0937_CF_GPIO   CONFIG_ESP_BL0937_CF_GPIO
-#define BL0937_CF1_GPIO  CONFIG_ESP_BL0937_CF1_GPIO
-#define BL0937_SEL_GPIO  CONFIG_ESP_BL0937_SEL_GPIO
 
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
@@ -53,9 +46,6 @@ static const char *IDENT_TAG   = "IDENT";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
-// Energy meter (BL0937)
-static bl0937_t bl0937;
-static void energy_task(void *args);
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -209,10 +199,6 @@ homekit_accessory_t *accessories[] = {
                 HOMEKIT_SERVICE(OUTLET, .primary = true, .characteristics = (homekit_characteristic_t *[]) {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
-                        &eve_voltage,
-                        &eve_current,
-                        &eve_power,
-                        &eve_total_kwh,
                         &ota_trigger,
                         NULL
                 }),
@@ -256,19 +242,6 @@ void button_callback(button_event_t event, void *context) {
         }
 }
 
-static void energy_task(void *args) {
-        (void)args;
-
-        while (true) {
-                bl0937_measurement_t m;
-                if (bl0937_get_latest(&bl0937, &m) == ESP_OK) {
-                        eve_energy_update(m.voltage, m.current, m.power, m.energy_kwh);
-                }
-                vTaskDelay(pdMS_TO_TICKS(2000));
-        }
-}
-
-
 // ---------- Wi-Fi / HomeKit startup ----------
 
 void on_wifi_ready() {
@@ -284,8 +257,7 @@ void on_wifi_ready() {
 
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
-        homekit_started = true
-        xTaskCreate(energy_task, "energy_task", 4096, NULL, 5, NULL);
+        homekit_started = true;
 }
 
 // ---------- app_main ----------
@@ -296,18 +268,6 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
-
-        ESP_ERROR_CHECK(bl0937_init(&bl0937,
-                                    (gpio_num_t)BL0937_CF_GPIO,
-                                    (gpio_num_t)BL0937_CF1_GPIO,
-                                    (gpio_num_t)BL0937_SEL_GPIO,
-                                    false));
-
-        // TODO: calibreren op jouw hardware (spanningsdeler + shunt).
-        // Startwaarden zijn placeholders.
-        bl0937_set_calibration(&bl0937, 1.0f, 1.0f, 1.0f);
-        bl0937_set_smoothing(&bl0937, 0.35f);
-        ESP_ERROR_CHECK(bl0937_start(&bl0937, 1000));
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
