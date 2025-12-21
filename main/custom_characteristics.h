@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdbool.h>
 
 #include <homekit/homekit.h>
