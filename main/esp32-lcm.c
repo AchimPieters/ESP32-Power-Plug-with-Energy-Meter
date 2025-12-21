@@ -46,6 +46,7 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
+#include <stddef.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
