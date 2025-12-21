@@ -15,14 +15,14 @@ This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Life
 
 ## Hardware connections
 
-All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come from `main/Kconfig.projbuild` and are now set for the ESP32-WROOM-32D so they avoid the SPI flash pins:
+All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come from `main/Kconfig.projbuild`:
 
 | Purpose | Kconfig option | Default GPIO |
 |---------|----------------|--------------|
-| Relay output | `CONFIG_ESP_RELAY_GPIO` | 26 |
-| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 27 |
-| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 25 |
-| Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 33 |
+| Relay output | `CONFIG_ESP_RELAY_GPIO` | 3 |
+| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 4 |
+| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 6 |
+| Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 7 |
 
 The blue LED follows the relay output. The red LED stays on until Wi‑Fi is connected; it also lights up when Wi‑Fi fails to start or provisioning is required.
 
@@ -48,7 +48,7 @@ Prerequisites are declared in `main/idf_component.yml`:
 Typical workflow:
 
 ```bash
-idf.py set-target esp32          # ESP32-WROOM-32D target
+idf.py set-target esp32c3        # or your specific target
 idf.py menuconfig              # set GPIOs and HomeKit setup credentials
 idf.py build
 idf.py flash monitor

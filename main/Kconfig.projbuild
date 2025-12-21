@@ -3,25 +3,25 @@ menu "StudioPieters"
 
       config ESP_RELAY_GPIO
               int "Set the GPIO for the Relay"
-              default 26
+              default 3
               help
                   The GPIO number the Relay is connected to.
 
       config ESP_BLUE_LED_GPIO
               int "Set the GPIO for the blue LED"
-              default 27
+              default 4
               help
                   The GPIO number the blue LED is connected to.
 
       config ESP_RED_LED_GPIO
               int "Set the GPIO for the red LED"
-              default 25
+              default 6
               help
                   The GPIO number the red LED is connected to.
 
       config ESP_BUTTON_GPIO
               int "Button GPIO"
-              default 33
+              default 7
               help
                   GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
 
@@ -36,65 +36,5 @@ menu "StudioPieters"
               default "M4T8"
               help
                    If you want to change the HomeKit Setup ID, you can do that here (Note: you need to make a new QR-CODE To make it work)
-
-      config BL0937_UART_NUM
-              int "BL0937 UART port"
-              default 1
-              help
-                  UART port number used for BL0937 communication (0, 1 or 2).
-
-      config BL0937_UART_TX_GPIO
-              int "BL0937 UART TX GPIO"
-              default 17
-              help
-                  GPIO used for BL0937 UART TX.
-
-      config BL0937_UART_RX_GPIO
-              int "BL0937 UART RX GPIO"
-              default 16
-              help
-                  GPIO used for BL0937 UART RX.
-
-      config BL0937_BAUDRATE
-              int "BL0937 UART baudrate"
-              default 4800
-              help
-                  UART baudrate for BL0937 (default 4800, 8E1).
-
-      config BL0937_VOLTAGE_MULTIPLIER_UV
-              int "BL0937 voltage multiplier (microvolts per count)"
-              default 1
-              help
-                  Calibration multiplier in microvolts per count for voltage.
-
-      config BL0937_CURRENT_MULTIPLIER_UA
-              int "BL0937 current multiplier (microamps per count)"
-              default 1
-              help
-                  Calibration multiplier in microamps per count for current.
-
-      config BL0937_POWER_MULTIPLIER_UW
-              int "BL0937 power multiplier (microwatts per count)"
-              default 1
-              help
-                  Calibration multiplier in microwatts per count for power.
-
-      config BL0937_ENERGY_MULTIPLIER_UWH
-              int "BL0937 energy multiplier (micro-watt-hours per count)"
-              default 0
-              help
-                  Optional calibration multiplier in micro-watt-hours per count for energy (0 to integrate power over time).
-
-      config BL0937_OVERCURRENT_LIMIT_MA
-              int "BL0937 overcurrent limit (mA)"
-              default 16000
-              help
-                  Overcurrent trip limit in milliamps.
-
-      config BL0937_UPDATE_INTERVAL_MS
-              int "BL0937 update interval (ms)"
-              default 1000
-              help
-                  Interval for publishing energy measurements to HomeKit.
 
 endmenu
