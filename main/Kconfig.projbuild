@@ -3,27 +3,36 @@ menu "StudioPieters"
 
       config ESP_RELAY_GPIO
               int "Set the GPIO for the Relay"
-              default 3
+              default 16
               help
                   The GPIO number the Relay is connected to.
 
       config ESP_BLUE_LED_GPIO
               int "Set the GPIO for the blue LED"
-              default 4
+              default 2
               help
                   The GPIO number the blue LED is connected to.
 
       config ESP_RED_LED_GPIO
               int "Set the GPIO for the red LED"
-              default 6
+              default 4
               help
                   The GPIO number the red LED is connected to.
 
       config ESP_BUTTON_GPIO
               int "Button GPIO"
-              default 7
+              default 13
               help
                   GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
+
+      config BL0937_GPIO_CF
+              default 18
+
+      config BL0937_GPIO_CF1
+              default 19
+
+      config BL0937_GPIO_SEL
+              default 21
 
       config ESP_SETUP_CODE
               string "HomeKit Setup Code"
