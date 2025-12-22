@@ -25,6 +25,7 @@
 
 #include <math.h>
 
+#include <esp_intr_alloc.h>
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
@@ -284,7 +285,7 @@ esp_err_t bl0937_init(const bl0937_config_t *config) {
     bl0937_state.select_voltage = true;
     bl0937_state.last_reading = (bl0937_reading_t){0};
 
-    esp_err_t err = gpio_install_isr_service(0);
+    esp_err_t err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         return err;
     }
@@ -318,6 +319,8 @@ esp_err_t bl0937_init(const bl0937_config_t *config) {
 
     ESP_ERROR_CHECK(gpio_isr_handler_add(config->cf_gpio, bl0937_cf_isr, NULL));
     ESP_ERROR_CHECK(gpio_isr_handler_add(config->cf1_gpio, bl0937_cf1_isr, NULL));
+    gpio_intr_disable(config->cf_gpio);
+    gpio_intr_disable(config->cf1_gpio);
 
     ESP_LOGI(BL0937_TAG, "BL0937 initialized (CF=%d CF1=%d SEL=%d)",
              config->cf_gpio, config->cf1_gpio, config->sel_gpio);
@@ -332,6 +335,12 @@ esp_err_t bl0937_start(bl0937_update_cb_t callback, void *context) {
 
     bl0937_state.callback = callback;
     bl0937_state.callback_context = context;
+    bl0937_state.cf_pulse_last_time = (uint64_t)esp_timer_get_time();
+    bl0937_state.cf1_pulse_last_time = bl0937_state.cf_pulse_last_time;
+    bl0937_state.load_off = true;
+
+    gpio_intr_enable(bl0937_state.config.cf_gpio);
+    gpio_intr_enable(bl0937_state.config.cf1_gpio);
 
     BaseType_t created = xTaskCreate(bl0937_task, "bl0937_task", 4096, NULL, 5,
                                      &bl0937_state.task_handle);
