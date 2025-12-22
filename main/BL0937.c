@@ -70,7 +70,6 @@ static void IRAM_ATTR bl0937_cf_isr(void *arg) {
     if (bl0937_state.load_off) {
         bl0937_state.cf_pulse_last_time = now;
         bl0937_state.load_off = false;
-        bl0937_state.energy_pulse_counter++;
     } else {
         bl0937_state.cf_pulse_length = now - bl0937_state.cf_pulse_last_time;
         bl0937_state.cf_pulse_last_time = now;
@@ -237,12 +236,22 @@ static void bl0937_task(void *arg) {
         }
 
         sample_counter++;
-        bl0937_state.cf1_timer++;
 
+        bool toggle_cf1 = false;
         if (sample_counter >= cycle_divider) {
             sample_counter = 0;
+            toggle_cf1 = true;
+        }
+
+        portENTER_CRITICAL(&bl0937_state.mux);
+        bl0937_state.cf1_timer++;
+        if (toggle_cf1) {
             bl0937_state.cf1_timer = 0;
             bl0937_state.select_voltage = !bl0937_state.select_voltage;
+        }
+        portEXIT_CRITICAL(&bl0937_state.mux);
+
+        if (toggle_cf1) {
             bl0937_set_sel_output(bl0937_state.select_voltage);
         }
     }
