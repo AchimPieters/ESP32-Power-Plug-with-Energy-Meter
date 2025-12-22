@@ -9,21 +9,6 @@ homekit_characteristic_t energy_characteristic = API_ENERGY;
 homekit_characteristic_t power_factor_characteristic = API_POWER_FACTOR;
 homekit_characteristic_t frequency_characteristic = API_FREQUENCY;
 homekit_characteristic_t total_consumption_characteristic = API_TOTAL_CONSUMPTION;
-static homekit_characteristic_t energy_service_name =
-        HOMEKIT_CHARACTERISTIC_(NAME, "Energy Meter");
-
-homekit_service_t custom_characteristics_service = HOMEKIT_SERVICE_(CUSTOM_ENERGY_METER,
-        .characteristics = (homekit_characteristic_t *[]) {
-                &energy_service_name,
-                &voltage_characteristic,
-                &current_characteristic,
-                &power_characteristic,
-                &energy_characteristic,
-                &power_factor_characteristic,
-                &frequency_characteristic,
-                &total_consumption_characteristic,
-                NULL
-        });
 
 static void custom_characteristic_set_float(homekit_characteristic_t *characteristic,
                                             float value) {

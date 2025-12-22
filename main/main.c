@@ -218,7 +218,6 @@ homekit_accessory_t *accessories[] = {
                         &ota_trigger,
                         NULL
                 }),
-                &custom_characteristics_service,
                 NULL
         }),
         NULL

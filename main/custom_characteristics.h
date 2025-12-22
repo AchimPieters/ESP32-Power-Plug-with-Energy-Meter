@@ -119,7 +119,6 @@
 extern "C" {
 #endif
 
-extern homekit_service_t custom_characteristics_service;
 extern homekit_characteristic_t voltage_characteristic;
 extern homekit_characteristic_t current_characteristic;
 extern homekit_characteristic_t power_characteristic;
