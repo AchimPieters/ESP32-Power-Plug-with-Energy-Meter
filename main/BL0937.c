@@ -185,8 +185,12 @@ static void bl0937_task(void *arg) {
 
         uint64_t now = (uint64_t)esp_timer_get_time();
         if (now - cf_pulse_last_time > BL0937_POWER_PROBE_TIME_US) {
-            bl0937_state.cf_pulse_length = 0;
-            bl0937_state.load_off = true;
+            portENTER_CRITICAL(&bl0937_state.mux);
+            if (now - bl0937_state.cf_pulse_last_time > BL0937_POWER_PROBE_TIME_US) {
+                bl0937_state.cf_pulse_length = 0;
+                bl0937_state.load_off = true;
+            }
+            portEXIT_CRITICAL(&bl0937_state.mux);
         }
 
         if (cf_pulse_counter && !bl0937_state.load_off) {
