@@ -122,8 +122,8 @@ void gpio_init(void) {
 // ---------- Accessory identification (Blue LED) ----------
 
 void accessory_identify_task(void *args) {
-        // Blink BLUE LED to identify, then restore previous state
-        bool previous_led_state = relay_on; // LED volgt normaal relay_on
+        // Blink BLUE LED to identify, then restore current relay state
+        bool initial_led_state = relay_on; // LED volgt normaal relay_on
 
         for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 2; j++) {
@@ -136,7 +136,10 @@ void accessory_identify_task(void *args) {
         }
 
         // Zet LED terug naar de normale toestand (afhankelijk van relay_on)
-        blue_led_write(previous_led_state);
+        if (relay_on != initial_led_state) {
+                ESP_LOGI(IDENT_TAG, "Relay state changed during identify; restoring new state");
+        }
+        blue_led_write(relay_on);
 
         vTaskDelete(NULL);
 }

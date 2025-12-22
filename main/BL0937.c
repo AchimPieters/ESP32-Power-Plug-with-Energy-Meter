@@ -168,6 +168,7 @@ static void bl0937_task(void *arg) {
         uint32_t cf1_summed_pulse_length;
         uint32_t cf1_pulse_counter;
         uint32_t energy_pulse_counter;
+        bool load_off;
 
         portENTER_CRITICAL(&bl0937_state.mux);
         cf_pulse_last_time = bl0937_state.cf_pulse_last_time;
@@ -176,6 +177,7 @@ static void bl0937_task(void *arg) {
         cf1_summed_pulse_length = bl0937_state.cf1_summed_pulse_length;
         cf1_pulse_counter = bl0937_state.cf1_pulse_counter;
         energy_pulse_counter = bl0937_state.energy_pulse_counter;
+        load_off = bl0937_state.load_off;
         bl0937_state.cf_summed_pulse_length = 0;
         bl0937_state.cf_pulse_counter = 0;
         bl0937_state.cf1_summed_pulse_length = 0;
@@ -193,9 +195,9 @@ static void bl0937_task(void *arg) {
             portEXIT_CRITICAL(&bl0937_state.mux);
         }
 
-        if (cf_pulse_counter && !bl0937_state.load_off) {
+        if (cf_pulse_counter && !load_off) {
             bl0937_state.cf_power_pulse_length = cf_summed_pulse_length / cf_pulse_counter;
-        } else if (bl0937_state.load_off) {
+        } else if (load_off) {
             bl0937_state.cf_power_pulse_length = 0;
         }
 
@@ -212,7 +214,7 @@ static void bl0937_task(void *arg) {
         float voltage = bl0937_calculate_voltage(bl0937_state.cf1_voltage_pulse_length);
         float current = bl0937_calculate_current(bl0937_state.cf1_current_pulse_length);
 
-        if (bl0937_state.load_off) {
+        if (load_off) {
             power = 0.0f;
             current = 0.0f;
         }
