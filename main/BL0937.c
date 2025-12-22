@@ -41,11 +41,11 @@ typedef struct {
     TaskHandle_t task_handle;
     portMUX_TYPE mux;
     volatile uint32_t cf_pulse_length;
-    volatile uint32_t cf_pulse_last_time;
+    volatile uint64_t cf_pulse_last_time;
     volatile uint32_t cf_summed_pulse_length;
     volatile uint32_t cf_pulse_counter;
     volatile uint32_t cf1_pulse_length;
-    volatile uint32_t cf1_pulse_last_time;
+    volatile uint64_t cf1_pulse_last_time;
     volatile uint32_t cf1_summed_pulse_length;
     volatile uint32_t cf1_pulse_counter;
     volatile uint32_t energy_pulse_counter;
@@ -64,7 +64,7 @@ static bl0937_state_t bl0937_state = {
 
 static void IRAM_ATTR bl0937_cf_isr(void *arg) {
     (void)arg;
-    uint32_t now = (uint32_t)esp_timer_get_time();
+    uint64_t now = (uint64_t)esp_timer_get_time();
 
     portENTER_CRITICAL_ISR(&bl0937_state.mux);
     if (bl0937_state.load_off) {
@@ -82,7 +82,7 @@ static void IRAM_ATTR bl0937_cf_isr(void *arg) {
 
 static void IRAM_ATTR bl0937_cf1_isr(void *arg) {
     (void)arg;
-    uint32_t now = (uint32_t)esp_timer_get_time();
+    uint64_t now = (uint64_t)esp_timer_get_time();
 
     portENTER_CRITICAL_ISR(&bl0937_state.mux);
     bl0937_state.cf1_pulse_length = now - bl0937_state.cf1_pulse_last_time;
@@ -162,7 +162,7 @@ static void bl0937_task(void *arg) {
     while (true) {
         vTaskDelay(delay_ticks);
 
-        uint32_t cf_pulse_last_time;
+        uint64_t cf_pulse_last_time;
         uint32_t cf_summed_pulse_length;
         uint32_t cf_pulse_counter;
         uint32_t cf1_summed_pulse_length;
@@ -183,7 +183,7 @@ static void bl0937_task(void *arg) {
         bl0937_state.energy_pulse_counter = 0;
         portEXIT_CRITICAL(&bl0937_state.mux);
 
-        int64_t now = esp_timer_get_time();
+        uint64_t now = (uint64_t)esp_timer_get_time();
         if (now - cf_pulse_last_time > BL0937_POWER_PROBE_TIME_US) {
             bl0937_state.cf_pulse_length = 0;
             bl0937_state.load_off = true;
@@ -247,7 +247,7 @@ esp_err_t bl0937_init(const bl0937_config_t *config) {
     bl0937_state.callback = NULL;
     bl0937_state.callback_context = NULL;
     bl0937_state.load_off = true;
-    bl0937_state.cf_pulse_last_time = (uint32_t)esp_timer_get_time();
+    bl0937_state.cf_pulse_last_time = (uint64_t)esp_timer_get_time();
     bl0937_state.cf1_pulse_last_time = bl0937_state.cf_pulse_last_time;
 
     esp_err_t err = gpio_install_isr_service(0);
