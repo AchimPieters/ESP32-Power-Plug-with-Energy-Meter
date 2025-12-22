@@ -1,5 +1,7 @@
 #include "custom_characteristics.h"
 
+#include <stddef.h>
+
 static homekit_characteristic_t voltage_characteristic = API_VOLTAGE;
 static homekit_characteristic_t current_characteristic = API_CURRENT;
 static homekit_characteristic_t power_characteristic = API_POWER;
@@ -39,9 +41,7 @@ static void custom_characteristic_set_float(homekit_characteristic_t *characteri
         homekit_characteristic_notify(characteristic, characteristic->value);
 }
 
-homekit_service_t *custom_characteristics_service(void) {
-        return &energy_meter_service;
-}
+homekit_service_t *custom_characteristics_service = &energy_meter_service;
 
 void custom_characteristics_update(float voltage,
                                    float current,
