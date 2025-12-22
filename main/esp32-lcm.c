@@ -581,6 +581,8 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
         wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     }
 
+    s_wifi_on_ready_cb = on_ready;
+
     err = esp_netif_init();
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(WIFI_TAG, "Failed to init netif: %s", esp_err_to_name(err));
@@ -609,8 +611,6 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
 
     WIFI_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
     WIFI_CHECK(esp_wifi_start());
-
-    s_wifi_on_ready_cb = on_ready;
     s_wifi_started = true;
 
     ESP_LOGI(WIFI_TAG, "WiFi start klaar (STA). Verbinden...");
