@@ -814,6 +814,29 @@ esp_err_t lifecycle_init_firmware_revision(homekit_characteristic_t *revision,
                     status = commit_err;
                 }
             }
+        } else if (err == ESP_ERR_NVS_INVALID_LENGTH) {
+            ESP_LOGW(LIFECYCLE_TAG,
+                     "Stored firmware revision length invalid; resetting entry");
+            strlcpy(s_fw_revision, current_version, sizeof(s_fw_revision));
+            esp_err_t erase_err = nvs_erase_key(handle, "installed_ver");
+            if (erase_err != ESP_OK && erase_err != ESP_ERR_NVS_NOT_FOUND) {
+                ESP_LOGW(LIFECYCLE_TAG, "Failed to erase invalid firmware revision: %s",
+                         esp_err_to_name(erase_err));
+                status = erase_err;
+            }
+            esp_err_t set_err = nvs_set_str(handle, "installed_ver", s_fw_revision);
+            if (set_err != ESP_OK) {
+                ESP_LOGW(LIFECYCLE_TAG, "Failed to store firmware revision: %s",
+                         esp_err_to_name(set_err));
+                status = set_err;
+            } else {
+                esp_err_t commit_err = nvs_commit(handle);
+                if (commit_err != ESP_OK) {
+                    ESP_LOGW(LIFECYCLE_TAG, "Commit of firmware revision failed: %s",
+                             esp_err_to_name(commit_err));
+                    status = commit_err;
+                }
+            }
         } else {
             ESP_LOGW(LIFECYCLE_TAG, "Reading stored firmware revision failed: %s",
                      esp_err_to_name(err));
