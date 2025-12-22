@@ -30,8 +30,11 @@
 #include <driver/gpio.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
+#include <stdlib.h>
 
 #include "esp32-lcm.h"
+#include "bl0937.h"
+#include "custom_characteristics.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -43,9 +46,13 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
+static const char *ENERGY_TAG  = "ENERGY";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
+static bool bl0937_ready = false;
+
+static bl0937_t bl0937_meter;
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -157,6 +164,10 @@ homekit_characteristic_t serial = HOMEKIT_CHARACTERISTIC_(SERIAL_NUMBER, DEVICE_
 homekit_characteristic_t model = HOMEKIT_CHARACTERISTIC_(MODEL, DEVICE_MODEL);
 homekit_characteristic_t revision = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION, LIFECYCLE_DEFAULT_FW_VERSION);
 homekit_characteristic_t ota_trigger = API_OTA_TRIGGER;
+homekit_characteristic_t energy_power = HOMEKIT_CHARACTERISTIC_(CUSTOM_POWER, 0.0);
+homekit_characteristic_t energy_voltage = HOMEKIT_CHARACTERISTIC_(CUSTOM_VOLTAGE, 0.0);
+homekit_characteristic_t energy_current = HOMEKIT_CHARACTERISTIC_(CUSTOM_CURRENT, 0.0);
+homekit_characteristic_t energy_total = HOMEKIT_CHARACTERISTIC_(CUSTOM_TOTAL_CONSUMPTION, 0.0);
 
 // Getter: HomeKit vraagt huidige toestand op
 homekit_value_t relay_on_get() {
@@ -180,6 +191,38 @@ void relay_on_set(homekit_value_t value) {
 homekit_characteristic_t relay_on_characteristic =
         HOMEKIT_CHARACTERISTIC_(ON, false, .getter = relay_on_get, .setter = relay_on_set);
 
+static void energy_update_task(void *args) {
+        bool select_voltage = true;
+
+        while (true) {
+                bl0937_set_cf1_mode(&bl0937_meter,
+                                    select_voltage ? BL0937_CF1_MODE_VOLTAGE : BL0937_CF1_MODE_CURRENT);
+
+                vTaskDelay(pdMS_TO_TICKS(CONFIG_ESP_BL0937_SAMPLE_INTERVAL_MS));
+
+                bl0937_update(&bl0937_meter);
+
+                custom_characteristics_update_float(&energy_power,
+                                                    bl0937_get_power_w(&bl0937_meter),
+                                                    0.5f);
+                custom_characteristics_update_float(&energy_total,
+                                                    bl0937_get_energy_wh(&bl0937_meter) / 1000.0f,
+                                                    0.01f);
+
+                if (select_voltage) {
+                        custom_characteristics_update_float(&energy_voltage,
+                                                            bl0937_get_voltage_v(&bl0937_meter),
+                                                            0.1f);
+                } else {
+                        custom_characteristics_update_float(&energy_current,
+                                                            bl0937_get_current_a(&bl0937_meter),
+                                                            0.01f);
+                }
+
+                select_voltage = !select_voltage;
+        }
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
 homekit_accessory_t *accessories[] = {
@@ -200,6 +243,14 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &ota_trigger,
+                        NULL
+                }),
+                HOMEKIT_SERVICE(CUSTOM_ENERGY_METER, .characteristics = (homekit_characteristic_t *[]) {
+                        HOMEKIT_CHARACTERISTIC(NAME, "Energy Meter"),
+                        &energy_power,
+                        &energy_voltage,
+                        &energy_current,
+                        &energy_total,
                         NULL
                 }),
                 NULL
@@ -246,6 +297,7 @@ void button_callback(button_event_t event, void *context) {
 
 void on_wifi_ready() {
         static bool homekit_started = false;
+        static bool energy_task_started = false;
 
         // WiFi is nu up -> rode LED uit
         red_led_write(false);
@@ -258,6 +310,12 @@ void on_wifi_ready() {
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
         homekit_started = true;
+
+        if (bl0937_ready && !energy_task_started) {
+                ESP_LOGI(ENERGY_TAG, "Starting BL0937 update task");
+                xTaskCreate(energy_update_task, "bl0937-update", 4096, NULL, 5, NULL);
+                energy_task_started = true;
+        }
 }
 
 // ---------- app_main ----------
@@ -268,6 +326,28 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
+
+        bl0937_config_t bl0937_config = {
+                .cf_pin = CONFIG_ESP_BL0937_CF_GPIO,
+                .cf1_pin = CONFIG_ESP_BL0937_CF1_GPIO,
+                .sel_pin = CONFIG_ESP_BL0937_SEL_GPIO,
+                .power_coeff = strtof(CONFIG_ESP_BL0937_POWER_COEFFICIENT, NULL),
+                .current_coeff = strtof(CONFIG_ESP_BL0937_CURRENT_COEFFICIENT, NULL),
+                .voltage_coeff = strtof(CONFIG_ESP_BL0937_VOLTAGE_COEFFICIENT, NULL),
+        };
+
+        if (bl0937_config.power_coeff <= 0.0f ||
+            bl0937_config.current_coeff <= 0.0f ||
+            bl0937_config.voltage_coeff <= 0.0f) {
+                ESP_LOGW(ENERGY_TAG, "BL0937 coefficients should be > 0 for accurate readings");
+        }
+
+        esp_err_t bl0937_err = bl0937_init(&bl0937_meter, &bl0937_config);
+        if (bl0937_err == ESP_OK) {
+                bl0937_ready = true;
+        } else {
+                ESP_LOGW(ENERGY_TAG, "BL0937 init failed: %s", esp_err_to_name(bl0937_err));
+        }
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
