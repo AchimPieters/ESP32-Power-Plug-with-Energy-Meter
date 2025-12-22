@@ -53,7 +53,7 @@ typedef struct {
     uint32_t cf_power_pulse_length;
     uint32_t cf1_voltage_pulse_length;
     uint32_t cf1_current_pulse_length;
-    volatile uint8_t cf1_timer;
+    volatile uint32_t cf1_timer;
     bool select_voltage;
     bl0937_reading_t last_reading;
 } bl0937_state_t;
@@ -250,9 +250,22 @@ esp_err_t bl0937_init(const bl0937_config_t *config) {
     bl0937_state.config = *config;
     bl0937_state.callback = NULL;
     bl0937_state.callback_context = NULL;
-    bl0937_state.load_off = true;
+    bl0937_state.cf_pulse_length = 0;
     bl0937_state.cf_pulse_last_time = (uint64_t)esp_timer_get_time();
+    bl0937_state.cf_summed_pulse_length = 0;
+    bl0937_state.cf_pulse_counter = 0;
+    bl0937_state.cf1_pulse_length = 0;
     bl0937_state.cf1_pulse_last_time = bl0937_state.cf_pulse_last_time;
+    bl0937_state.cf1_summed_pulse_length = 0;
+    bl0937_state.cf1_pulse_counter = 0;
+    bl0937_state.energy_pulse_counter = 0;
+    bl0937_state.load_off = true;
+    bl0937_state.cf_power_pulse_length = 0;
+    bl0937_state.cf1_voltage_pulse_length = 0;
+    bl0937_state.cf1_current_pulse_length = 0;
+    bl0937_state.cf1_timer = 0;
+    bl0937_state.select_voltage = true;
+    bl0937_state.last_reading = (bl0937_reading_t){0};
 
     esp_err_t err = gpio_install_isr_service(0);
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
