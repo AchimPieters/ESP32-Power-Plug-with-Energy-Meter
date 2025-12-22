@@ -70,6 +70,7 @@ static void IRAM_ATTR bl0937_cf_isr(void *arg) {
     if (bl0937_state.load_off) {
         bl0937_state.cf_pulse_last_time = now;
         bl0937_state.load_off = false;
+        bl0937_state.energy_pulse_counter++;
     } else {
         bl0937_state.cf_pulse_length = now - bl0937_state.cf_pulse_last_time;
         bl0937_state.cf_pulse_last_time = now;
