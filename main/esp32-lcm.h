@@ -3,13 +3,13 @@
 #include <sdkconfig.h>
 
 #include <esp_err.h>
-#include <stddef.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
-#ifndef HOMEKIT_CUSTOM_UUID
+#ifndef __HOMEKIT_CUSTOM_CHARACTERISTICS__
+#define __HOMEKIT_CUSTOM_CHARACTERISTICS__
+
 #define HOMEKIT_CUSTOM_UUID(value) (value "-0e36-4a42-ad11-745a73b84f2b")
-#endif
 
 #define HOMEKIT_SERVICE_CUSTOM_SETUP HOMEKIT_CUSTOM_UUID("000000FF")
 
@@ -35,6 +35,8 @@
 #endif
 
 #define LIFECYCLE_FW_REVISION_MAX_LEN 32
+
+#endif /* __HOMEKIT_CUSTOM_CHARACTERISTICS__ */
 
 #ifdef __cplusplus
 extern "C" {

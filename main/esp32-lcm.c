@@ -46,7 +46,6 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
-#include <stddef.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
@@ -65,7 +64,6 @@ static const char *LIFECYCLE_TAG = "LIFECYCLE";
 
 static void (*s_wifi_on_ready_cb)(void) = NULL;
 static bool s_wifi_started = false;
-static bool s_wifi_stopping = false;
 static esp_netif_t *s_wifi_netif = NULL;
 
 static const uint32_t k_post_reset_magic = 0xC0DEC0DE;
@@ -93,7 +91,6 @@ RTC_DATA_ATTR static struct {
 static char s_fw_revision[LIFECYCLE_FW_REVISION_MAX_LEN];
 static bool s_fw_revision_initialized = false;
 static esp_timer_handle_t s_restart_counter_timer = NULL;
-static char s_restart_counter_log_tag[32] = "LIFECYCLE";
 static bool s_nvs_initialized = false;
 
 void wifi_config_shutdown(void) __attribute__((weak));
@@ -161,13 +158,6 @@ static esp_err_t nvs_load_wifi(char **out_ssid, char **out_pass) {
         nvs_close(handle);
         return err;
     }
-    if (ssid[0] == '\0') {
-        ESP_LOGE(WIFI_TAG, "Stored wifi_ssid is empty");
-        free(ssid);
-        free(pass);
-        nvs_close(handle);
-        return ESP_ERR_INVALID_ARG;
-    }
 
     if (len_pass == 1) {
         pass[0] = '\0';
@@ -196,10 +186,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
                 esp_wifi_connect();
                 break;
             case WIFI_EVENT_STA_DISCONNECTED: {
-                if (s_wifi_stopping) {
-                    ESP_LOGI(WIFI_TAG, "WiFi stopping; ignoring disconnect event");
-                    break;
-                }
                 wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)data;
                 ESP_LOGW(WIFI_TAG, "Disconnected (reason=%d). Reconnecting...", disc ? disc->reason : -1);
                 esp_wifi_connect();
@@ -210,10 +196,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
-        if (event == NULL) {
-            ESP_LOGW(WIFI_TAG, "Got IP event with NULL data");
-            return;
-        }
         ESP_LOGI(WIFI_TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
         if (s_wifi_on_ready_cb != NULL) {
             s_wifi_on_ready_cb();
@@ -412,10 +394,9 @@ static void lifecycle_schedule_restart_counter_timeout(const char *log_tag) {
     const char *tag = (log_tag != NULL) ? log_tag : LIFECYCLE_TAG;
 
     if (s_restart_counter_timer == NULL) {
-        strlcpy(s_restart_counter_log_tag, tag, sizeof(s_restart_counter_log_tag));
         const esp_timer_create_args_t timer_args = {
             .callback = lifecycle_restart_counter_timeout,
-            .arg = (void *)s_restart_counter_log_tag,
+            .arg = (void *)LIFECYCLE_TAG,
             .name = "restart_cnt_reset",
         };
 
@@ -451,12 +432,6 @@ static void lifecycle_schedule_restart_counter_timeout(const char *log_tag) {
 void lifecycle_log_post_reset_state(const char *log_tag) {
     const char *tag = (log_tag != NULL) ? log_tag : LIFECYCLE_TAG;
     uint32_t persisted_count = 0;
-
-    if (s_post_reset_state.magic != k_post_reset_magic) {
-        s_post_reset_state.restart_count = 0;
-        s_post_reset_state.reason = LIFECYCLE_POST_RESET_NONE;
-    }
-
     esp_err_t load_err = load_restart_counter_from_nvs(&persisted_count, tag);
     if (load_err == ESP_OK) {
         if (persisted_count > s_post_reset_state.restart_count) {
@@ -567,13 +542,6 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
     if (s_wifi_started) {
         s_wifi_on_ready_cb = on_ready;
         ESP_LOGI(WIFI_TAG, "WiFi already started");
-        if (s_wifi_on_ready_cb != NULL && s_wifi_netif != NULL) {
-            esp_netif_ip_info_t ip_info;
-            if (esp_netif_get_ip_info(s_wifi_netif, &ip_info) == ESP_OK &&
-                    ip_info.ip.addr != 0) {
-                s_wifi_on_ready_cb();
-            }
-        }
         return ESP_OK;
     }
 
@@ -601,99 +569,40 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
         wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     }
 
-    s_wifi_on_ready_cb = on_ready;
-
-    bool netif_created = false;
-    bool wifi_handler_registered = false;
-    bool ip_handler_registered = false;
-    bool wifi_initialized = false;
-
     err = esp_netif_init();
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(WIFI_TAG, "Failed to init netif: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
+        return err;
     }
     err = esp_event_loop_create_default();
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(WIFI_TAG, "Failed to create default event loop: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
+        return err;
     }
     if (s_wifi_netif == NULL) {
         s_wifi_netif = esp_netif_create_default_wifi_sta();
         if (s_wifi_netif == NULL) {
             ESP_LOGE(WIFI_TAG, "Failed to create default WiFi STA interface");
-            err = ESP_ERR_NO_MEM;
-            goto wifi_start_cleanup;
+            return ESP_ERR_NO_MEM;
         }
-        netif_created = true;
     }
 
-    err = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to register WiFi event handler: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
-    wifi_handler_registered = true;
-
-    err = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL);
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to register IP event handler: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
-    ip_handler_registered = true;
+    WIFI_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+    WIFI_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    err = esp_wifi_init(&cfg);
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to init WiFi driver: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
-    wifi_initialized = true;
+    WIFI_CHECK(esp_wifi_init(&cfg));
+    WIFI_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    WIFI_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
-    err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to set WiFi storage: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
+    WIFI_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
+    WIFI_CHECK(esp_wifi_start());
 
-    err = esp_wifi_set_mode(WIFI_MODE_STA);
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to set WiFi mode: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
-
-    err = esp_wifi_set_config(WIFI_IF_STA, &wc);
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to set WiFi config: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
-
-    err = esp_wifi_start();
-    if (err != ESP_OK) {
-        ESP_LOGE(WIFI_TAG, "Failed to start WiFi driver: %s", esp_err_to_name(err));
-        goto wifi_start_cleanup;
-    }
+    s_wifi_on_ready_cb = on_ready;
     s_wifi_started = true;
 
     ESP_LOGI(WIFI_TAG, "WiFi start klaar (STA). Verbinden...");
     return ESP_OK;
-
-wifi_start_cleanup:
-    if (ip_handler_registered) {
-        esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler);
-    }
-    if (wifi_handler_registered) {
-        esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler);
-    }
-    if (wifi_initialized) {
-        esp_wifi_deinit();
-    }
-    if (netif_created && s_wifi_netif != NULL) {
-        esp_netif_destroy(s_wifi_netif);
-        s_wifi_netif = NULL;
-    }
-    s_wifi_on_ready_cb = NULL;
-    return err;
 }
 
 esp_err_t wifi_stop(void) {
@@ -704,7 +613,6 @@ esp_err_t wifi_stop(void) {
     ESP_LOGI(WIFI_TAG, "WiFi stoppen...");
 
     esp_err_t result = ESP_OK;
-    s_wifi_stopping = true;
 
     esp_err_t disconnect_err = esp_wifi_disconnect();
     if (disconnect_err != ESP_OK && disconnect_err != ESP_ERR_WIFI_NOT_STARTED &&
@@ -756,7 +664,6 @@ esp_err_t wifi_stop(void) {
 
     s_wifi_started = false;
     s_wifi_on_ready_cb = NULL;
-    s_wifi_stopping = false;
 
     ESP_LOGI(WIFI_TAG, "WiFi driver stopped");
     return result;
@@ -801,29 +708,6 @@ esp_err_t lifecycle_init_firmware_revision(homekit_characteristic_t *revision,
             used_stored_value = true;
         } else if (err == ESP_ERR_NVS_NOT_FOUND || s_fw_revision[0] == '\0') {
             strlcpy(s_fw_revision, current_version, sizeof(s_fw_revision));
-            esp_err_t set_err = nvs_set_str(handle, "installed_ver", s_fw_revision);
-            if (set_err != ESP_OK) {
-                ESP_LOGW(LIFECYCLE_TAG, "Failed to store firmware revision: %s",
-                         esp_err_to_name(set_err));
-                status = set_err;
-            } else {
-                esp_err_t commit_err = nvs_commit(handle);
-                if (commit_err != ESP_OK) {
-                    ESP_LOGW(LIFECYCLE_TAG, "Commit of firmware revision failed: %s",
-                             esp_err_to_name(commit_err));
-                    status = commit_err;
-                }
-            }
-        } else if (err == ESP_ERR_NVS_INVALID_LENGTH) {
-            ESP_LOGW(LIFECYCLE_TAG,
-                     "Stored firmware revision length invalid; resetting entry");
-            strlcpy(s_fw_revision, current_version, sizeof(s_fw_revision));
-            esp_err_t erase_err = nvs_erase_key(handle, "installed_ver");
-            if (erase_err != ESP_OK && erase_err != ESP_ERR_NVS_NOT_FOUND) {
-                ESP_LOGW(LIFECYCLE_TAG, "Failed to erase invalid firmware revision: %s",
-                         esp_err_to_name(erase_err));
-                status = erase_err;
-            }
             esp_err_t set_err = nvs_set_str(handle, "installed_ver", s_fw_revision);
             if (set_err != ESP_OK) {
                 ESP_LOGW(LIFECYCLE_TAG, "Failed to store firmware revision: %s",
@@ -927,13 +811,7 @@ void lifecycle_request_update_and_reboot(void) {
     ESP_LOGI(LIFECYCLE_TAG, "Requesting Lifecycle Manager update and reboot");
 
     nvs_handle_t handle;
-    esp_err_t err = lifecycle_ensure_nvs_initialized(LIFECYCLE_TAG);
-    if (err != ESP_OK) {
-        ESP_LOGE(LIFECYCLE_TAG, "Failed to initialise NVS before update: %s", esp_err_to_name(err));
-        return;
-    }
-
-    err = nvs_open("lcm", NVS_READWRITE, &handle);
+    esp_err_t err = nvs_open("lcm", NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         ESP_LOGE(LIFECYCLE_TAG, "Failed to open NVS namespace 'lcm': %s", esp_err_to_name(err));
     } else {
