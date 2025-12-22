@@ -42,11 +42,11 @@ typedef struct {
     portMUX_TYPE mux;
     volatile uint32_t cf_pulse_length;
     volatile uint64_t cf_pulse_last_time;
-    volatile uint32_t cf_summed_pulse_length;
+    volatile uint64_t cf_summed_pulse_length;
     volatile uint32_t cf_pulse_counter;
     volatile uint32_t cf1_pulse_length;
     volatile uint64_t cf1_pulse_last_time;
-    volatile uint32_t cf1_summed_pulse_length;
+    volatile uint64_t cf1_summed_pulse_length;
     volatile uint32_t cf1_pulse_counter;
     volatile uint32_t energy_pulse_counter;
     volatile bool load_off;
@@ -163,9 +163,9 @@ static void bl0937_task(void *arg) {
         vTaskDelay(delay_ticks);
 
         uint64_t cf_pulse_last_time;
-        uint32_t cf_summed_pulse_length;
+        uint64_t cf_summed_pulse_length;
         uint32_t cf_pulse_counter;
-        uint32_t cf1_summed_pulse_length;
+        uint64_t cf1_summed_pulse_length;
         uint32_t cf1_pulse_counter;
         uint32_t energy_pulse_counter;
         bool load_off;
@@ -197,13 +197,15 @@ static void bl0937_task(void *arg) {
         }
 
         if (cf_pulse_counter && !load_off) {
-            bl0937_state.cf_power_pulse_length = cf_summed_pulse_length / cf_pulse_counter;
+            bl0937_state.cf_power_pulse_length =
+                (uint32_t)(cf_summed_pulse_length / cf_pulse_counter);
         } else if (load_off) {
             bl0937_state.cf_power_pulse_length = 0;
         }
 
         if (cf1_pulse_counter) {
-            uint32_t cf1_pulse_length = cf1_summed_pulse_length / cf1_pulse_counter;
+            uint32_t cf1_pulse_length =
+                (uint32_t)(cf1_summed_pulse_length / cf1_pulse_counter);
             if (bl0937_state.select_voltage) {
                 bl0937_state.cf1_voltage_pulse_length = cf1_pulse_length;
             } else {
