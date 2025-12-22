@@ -93,6 +93,7 @@ RTC_DATA_ATTR static struct {
 static char s_fw_revision[LIFECYCLE_FW_REVISION_MAX_LEN];
 static bool s_fw_revision_initialized = false;
 static esp_timer_handle_t s_restart_counter_timer = NULL;
+static char s_restart_counter_log_tag[32] = LIFECYCLE_TAG;
 static bool s_nvs_initialized = false;
 
 void wifi_config_shutdown(void) __attribute__((weak));
@@ -411,9 +412,10 @@ static void lifecycle_schedule_restart_counter_timeout(const char *log_tag) {
     const char *tag = (log_tag != NULL) ? log_tag : LIFECYCLE_TAG;
 
     if (s_restart_counter_timer == NULL) {
+        strlcpy(s_restart_counter_log_tag, tag, sizeof(s_restart_counter_log_tag));
         const esp_timer_create_args_t timer_args = {
             .callback = lifecycle_restart_counter_timeout,
-            .arg = (void *)tag,
+            .arg = (void *)s_restart_counter_log_tag,
             .name = "restart_cnt_reset",
         };
 
@@ -565,6 +567,13 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
     if (s_wifi_started) {
         s_wifi_on_ready_cb = on_ready;
         ESP_LOGI(WIFI_TAG, "WiFi already started");
+        if (s_wifi_on_ready_cb != NULL && s_wifi_netif != NULL) {
+            esp_netif_ip_info_t ip_info;
+            if (esp_netif_get_ip_info(s_wifi_netif, &ip_info) == ESP_OK &&
+                    ip_info.ip.addr != 0) {
+                s_wifi_on_ready_cb();
+            }
+        }
         return ESP_OK;
     }
 
