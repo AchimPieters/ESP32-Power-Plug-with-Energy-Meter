@@ -1,11 +1,21 @@
 #include "bl0937.h"
 
+#include <stdlib.h>
+
 #include <driver/gpio.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "custom_characteristics.h"
+#include "sdkconfig.h"
+
 #define BL0937_TAG "BL0937"
+#define ENERGY_TAG "ENERGY"
+
+#ifndef CONFIG_ESP_BL0937_SEL_INVERTED
+#define CONFIG_ESP_BL0937_SEL_INVERTED 0
+#endif
 
 typedef struct {
         bl0937_config_t config;
@@ -118,6 +128,33 @@ static void bl0937_task(void *arg) {
         }
 }
 
+static void bl0937_measurements_callback(const bl0937_measurements_t *measurements,
+                                         void *context) {
+        if (!measurements) {
+                return;
+        }
+
+        custom_characteristics_update(measurements->voltage,
+                                      measurements->current,
+                                      measurements->power,
+                                      measurements->energy,
+                                      measurements->power_factor,
+                                      measurements->frequency,
+                                      measurements->total_consumption);
+
+        ESP_LOGD(ENERGY_TAG,
+                 "V=%.2fV I=%.3fA P=%.2fW E=%.4fWh PF=%.3f F=%.2fHz Tot=%.4fkWh",
+                 measurements->voltage,
+                 measurements->current,
+                 measurements->power,
+                 measurements->energy,
+                 measurements->power_factor,
+                 measurements->frequency,
+                 measurements->total_consumption);
+
+        (void)context;
+}
+
 esp_err_t bl0937_start(const bl0937_config_t *config,
                        bl0937_measurement_cb_t callback,
                        void *context) {
@@ -180,6 +217,31 @@ esp_err_t bl0937_start(const bl0937_config_t *config,
         }
 
         return ESP_OK;
+}
+
+esp_err_t bl0937_start_default(void) {
+        bl0937_config_t config = {
+                .cf_gpio = CONFIG_ESP_BL0937_CF_GPIO,
+                .cf1_gpio = CONFIG_ESP_BL0937_CF1_GPIO,
+                .sel_gpio = CONFIG_ESP_BL0937_SEL_GPIO,
+                .sel_inverted = CONFIG_ESP_BL0937_SEL_INVERTED,
+                .voltage_calibration = strtof(CONFIG_ESP_BL0937_VOLTAGE_CAL, NULL),
+                .current_calibration = strtof(CONFIG_ESP_BL0937_CURRENT_CAL, NULL),
+                .power_calibration = strtof(CONFIG_ESP_BL0937_POWER_CAL, NULL),
+                .power_max_watts = strtof(CONFIG_ESP_BL0937_POWER_MAX, NULL),
+                .frequency_hz = strtof(CONFIG_ESP_BL0937_FREQUENCY_HZ, NULL),
+                .sample_period_ms = CONFIG_ESP_BL0937_SAMPLE_PERIOD_MS,
+        };
+
+        esp_err_t bl0937_err = bl0937_start(&config,
+                                            bl0937_measurements_callback,
+                                            NULL);
+        if (bl0937_err != ESP_OK) {
+                ESP_LOGE(ENERGY_TAG, "Failed to start BL0937: %s",
+                         esp_err_to_name(bl0937_err));
+        }
+
+        return bl0937_err;
 }
 
 void bl0937_stop(void) {
