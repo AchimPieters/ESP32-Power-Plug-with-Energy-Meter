@@ -444,6 +444,12 @@ static void lifecycle_schedule_restart_counter_timeout(const char *log_tag) {
 void lifecycle_log_post_reset_state(const char *log_tag) {
     const char *tag = (log_tag != NULL) ? log_tag : LIFECYCLE_TAG;
     uint32_t persisted_count = 0;
+
+    if (s_post_reset_state.magic != k_post_reset_magic) {
+        s_post_reset_state.restart_count = 0;
+        s_post_reset_state.reason = LIFECYCLE_POST_RESET_NONE;
+    }
+
     esp_err_t load_err = load_restart_counter_from_nvs(&persisted_count, tag);
     if (load_err == ESP_OK) {
         if (persisted_count > s_post_reset_state.restart_count) {
