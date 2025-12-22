@@ -120,6 +120,13 @@ extern "C" {
 #endif
 
 extern homekit_service_t custom_characteristics_service;
+extern homekit_characteristic_t voltage_characteristic;
+extern homekit_characteristic_t current_characteristic;
+extern homekit_characteristic_t power_characteristic;
+extern homekit_characteristic_t energy_characteristic;
+extern homekit_characteristic_t power_factor_characteristic;
+extern homekit_characteristic_t frequency_characteristic;
+extern homekit_characteristic_t total_consumption_characteristic;
 
 void custom_characteristics_update(float voltage,
                                    float current,

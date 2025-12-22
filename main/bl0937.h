@@ -34,4 +34,5 @@ typedef void (*bl0937_measurement_cb_t)(const bl0937_measurements_t *measurement
 esp_err_t bl0937_start(const bl0937_config_t *config,
                        bl0937_measurement_cb_t callback,
                        void *context);
+esp_err_t bl0937_start_default(void);
 void bl0937_stop(void);

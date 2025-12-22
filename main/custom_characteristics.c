@@ -2,13 +2,13 @@
 
 #include <stddef.h>
 
-static homekit_characteristic_t voltage_characteristic = API_VOLTAGE;
-static homekit_characteristic_t current_characteristic = API_CURRENT;
-static homekit_characteristic_t power_characteristic = API_POWER;
-static homekit_characteristic_t energy_characteristic = API_ENERGY;
-static homekit_characteristic_t power_factor_characteristic = API_POWER_FACTOR;
-static homekit_characteristic_t frequency_characteristic = API_FREQUENCY;
-static homekit_characteristic_t total_consumption_characteristic = API_TOTAL_CONSUMPTION;
+homekit_characteristic_t voltage_characteristic = API_VOLTAGE;
+homekit_characteristic_t current_characteristic = API_CURRENT;
+homekit_characteristic_t power_characteristic = API_POWER;
+homekit_characteristic_t energy_characteristic = API_ENERGY;
+homekit_characteristic_t power_factor_characteristic = API_POWER_FACTOR;
+homekit_characteristic_t frequency_characteristic = API_FREQUENCY;
+homekit_characteristic_t total_consumption_characteristic = API_TOTAL_CONSUMPTION;
 static homekit_characteristic_t energy_service_name =
         HOMEKIT_CHARACTERISTIC_(NAME, "Energy Meter");
 

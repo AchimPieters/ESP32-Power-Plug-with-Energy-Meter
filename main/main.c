@@ -21,9 +21,6 @@
    for more information visit https://www.studiopieters.nl
  **/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
@@ -47,7 +44,6 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
-static const char *ENERGY_TAG  = "ENERGY";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
@@ -71,10 +67,6 @@ static inline void red_led_write(bool on) {
 // Forward declaration van de characteristic zodat we hem in functies kunnen gebruiken
 extern homekit_characteristic_t relay_on_characteristic;
 extern homekit_characteristic_t outlet_in_use_characteristic;
-
-#ifndef CONFIG_ESP_BL0937_SEL_INVERTED
-#define CONFIG_ESP_BL0937_SEL_INVERTED 0
-#endif
 
 // Centrale functie: zet state, stuurt hardware aan en (optioneel) HomeKit-notify
 static void relay_set_state(bool on, bool notify_homekit) {
@@ -196,31 +188,6 @@ homekit_characteristic_t relay_on_characteristic =
 homekit_characteristic_t outlet_in_use_characteristic =
         HOMEKIT_CHARACTERISTIC_(OUTLET_IN_USE, false);
 
-static void bl0937_measurements_callback(const bl0937_measurements_t *measurements,
-                                         void *context) {
-        if (!measurements) {
-                return;
-        }
-
-        custom_characteristics_update(measurements->voltage,
-                                      measurements->current,
-                                      measurements->power,
-                                      measurements->energy,
-                                      measurements->power_factor,
-                                      measurements->frequency,
-                                      measurements->total_consumption);
-
-        ESP_LOGD(ENERGY_TAG,
-                 "V=%.2fV I=%.3fA P=%.2fW E=%.4fWh PF=%.3f F=%.2fHz Tot=%.4fkWh",
-                 measurements->voltage,
-                 measurements->current,
-                 measurements->power,
-                 measurements->energy,
-                 measurements->power_factor,
-                 measurements->frequency,
-                 measurements->total_consumption);
-}
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
 homekit_accessory_t *accessories[] = {
@@ -241,6 +208,13 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &outlet_in_use_characteristic,
+                        &voltage_characteristic,
+                        &current_characteristic,
+                        &power_characteristic,
+                        &energy_characteristic,
+                        &power_factor_characteristic,
+                        &frequency_characteristic,
+                        &total_consumption_characteristic,
                         &ota_trigger,
                         NULL
                 }),
@@ -312,26 +286,7 @@ void app_main(void) {
 
         gpio_init();
 
-        bl0937_config_t bl0937_config = {
-                .cf_gpio = CONFIG_ESP_BL0937_CF_GPIO,
-                .cf1_gpio = CONFIG_ESP_BL0937_CF1_GPIO,
-                .sel_gpio = CONFIG_ESP_BL0937_SEL_GPIO,
-                .sel_inverted = CONFIG_ESP_BL0937_SEL_INVERTED,
-                .voltage_calibration = strtof(CONFIG_ESP_BL0937_VOLTAGE_CAL, NULL),
-                .current_calibration = strtof(CONFIG_ESP_BL0937_CURRENT_CAL, NULL),
-                .power_calibration = strtof(CONFIG_ESP_BL0937_POWER_CAL, NULL),
-                .power_max_watts = strtof(CONFIG_ESP_BL0937_POWER_MAX, NULL),
-                .frequency_hz = strtof(CONFIG_ESP_BL0937_FREQUENCY_HZ, NULL),
-                .sample_period_ms = CONFIG_ESP_BL0937_SAMPLE_PERIOD_MS,
-        };
-
-        esp_err_t bl0937_err = bl0937_start(&bl0937_config,
-                                            bl0937_measurements_callback,
-                                            NULL);
-        if (bl0937_err != ESP_OK) {
-                ESP_LOGE(ENERGY_TAG, "Failed to start BL0937: %s",
-                         esp_err_to_name(bl0937_err));
-        }
+        bl0937_start_default();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
