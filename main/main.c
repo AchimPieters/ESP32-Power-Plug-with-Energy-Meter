@@ -89,7 +89,7 @@ static void relay_set_state(bool on, bool notify_homekit) {
         relay_on_characteristic.value = HOMEKIT_BOOL(relay_on);
 
         // Eventueel HomeKit-clients informeren
-        if (notify_homekit) {
+        if (notify_homekit && homekit_started) {
                 homekit_characteristic_notify(&relay_on_characteristic,
                                               relay_on_characteristic.value);
         }
