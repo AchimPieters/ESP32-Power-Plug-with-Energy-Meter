@@ -149,8 +149,11 @@ static void bl0937_task(void *arg) {
     uint32_t sample_counter = 0;
     uint32_t cycle_divider = 1000 / update_interval_ms;
 
-    if (cycle_divider == 0) {
-        cycle_divider = 1;
+    if (cycle_divider < 2) {
+        ESP_LOGW(BL0937_TAG,
+                 "Update interval %u ms yields short CF1 cycles; using divider 2 for stability",
+                 (unsigned)update_interval_ms);
+        cycle_divider = 2;
     }
 
     bl0937_state.select_voltage = true;
