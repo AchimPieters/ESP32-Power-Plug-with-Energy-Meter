@@ -1,7 +1,6 @@
 #pragma once
 
-#include <homekit/homekit.h>
-#include <homekit/characteristics.h>
+#include "homekit_compat.h"
 
 #ifndef HOMEKIT_CUSTOM_UUID
 #define HOMEKIT_CUSTOM_UUID(value) (value "-0e36-4a42-ad11-745a73b84f2b")
