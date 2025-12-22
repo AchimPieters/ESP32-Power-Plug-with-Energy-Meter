@@ -191,6 +191,7 @@ static void bl0937_task(void *arg) {
             if (now - bl0937_state.cf_pulse_last_time > BL0937_POWER_PROBE_TIME_US) {
                 bl0937_state.cf_pulse_length = 0;
                 bl0937_state.load_off = true;
+                load_off = true;
             }
             portEXIT_CRITICAL(&bl0937_state.mux);
         }
@@ -219,6 +220,7 @@ static void bl0937_task(void *arg) {
             current = 0.0f;
         }
 
+        portENTER_CRITICAL(&bl0937_state.mux);
         if (energy_pulse_counter && bl0937_state.config.pulses_per_kwh > 0) {
             bl0937_state.last_reading.energy +=
                     (float)energy_pulse_counter / (float)bl0937_state.config.pulses_per_kwh;
@@ -227,6 +229,7 @@ static void bl0937_task(void *arg) {
         bl0937_state.last_reading.power = power;
         bl0937_state.last_reading.voltage = voltage;
         bl0937_state.last_reading.current = current;
+        portEXIT_CRITICAL(&bl0937_state.mux);
 
         if (bl0937_state.callback) {
             bl0937_state.callback(&bl0937_state.last_reading, bl0937_state.callback_context);
@@ -341,6 +344,8 @@ bool bl0937_get_last_reading(bl0937_reading_t *out_reading) {
         return false;
     }
 
+    portENTER_CRITICAL(&bl0937_state.mux);
     *out_reading = bl0937_state.last_reading;
+    portEXIT_CRITICAL(&bl0937_state.mux);
     return true;
 }
