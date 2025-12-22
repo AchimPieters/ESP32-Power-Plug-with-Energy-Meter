@@ -25,48 +25,6 @@ menu "StudioPieters"
               help
                   GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
 
-      config ESP_BL0937_CF_GPIO
-              int "BL0937 CF GPIO"
-              default 8
-              help
-                  GPIO verbonden met de CF-pin van de BL0937.
-
-      config ESP_BL0937_CF1_GPIO
-              int "BL0937 CF1 GPIO"
-              default 9
-              help
-                  GPIO verbonden met de CF1-pin van de BL0937.
-
-      config ESP_BL0937_SEL_GPIO
-              int "BL0937 SEL GPIO"
-              default 10
-              help
-                  GPIO verbonden met de SEL-pin van de BL0937.
-
-      config ESP_BL0937_POWER_COEFFICIENT
-              string "BL0937 power coefficient (W/Hz)"
-              default "1.0"
-              help
-                  Calibratiefactor voor vermogensmeting (Watt per Hz).
-
-      config ESP_BL0937_CURRENT_COEFFICIENT
-              string "BL0937 current coefficient (A/Hz)"
-              default "1.0"
-              help
-                  Calibratiefactor voor stroommeting (Ampère per Hz).
-
-      config ESP_BL0937_VOLTAGE_COEFFICIENT
-              string "BL0937 voltage coefficient (V/Hz)"
-              default "1.0"
-              help
-                  Calibratiefactor voor spanningsmeting (Volt per Hz).
-
-      config ESP_BL0937_SAMPLE_INTERVAL_MS
-              int "BL0937 sample interval (ms)"
-              default 1000
-              help
-                  Sample interval voor het bijwerken van HomeKit-energy waarden.
-
       config ESP_SETUP_CODE
               string "HomeKit Setup Code"
               default "693-41-208"
