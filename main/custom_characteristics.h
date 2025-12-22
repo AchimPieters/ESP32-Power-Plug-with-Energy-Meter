@@ -119,7 +119,7 @@
 extern "C" {
 #endif
 
-extern homekit_service_t *custom_characteristics_service;
+extern homekit_service_t custom_characteristics_service;
 
 void custom_characteristics_update(float voltage,
                                    float current,

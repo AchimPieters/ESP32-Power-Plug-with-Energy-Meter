@@ -12,7 +12,7 @@ static homekit_characteristic_t total_consumption_characteristic = API_TOTAL_CON
 static homekit_characteristic_t energy_service_name =
         HOMEKIT_CHARACTERISTIC_(NAME, "Energy Meter");
 
-static homekit_service_t energy_meter_service = HOMEKIT_SERVICE_(CUSTOM_ENERGY_METER,
+homekit_service_t custom_characteristics_service = HOMEKIT_SERVICE_(CUSTOM_ENERGY_METER,
         .characteristics = (homekit_characteristic_t *[]) {
                 &energy_service_name,
                 &voltage_characteristic,
@@ -40,8 +40,6 @@ static void custom_characteristic_set_float(homekit_characteristic_t *characteri
         characteristic->value.float_value = value;
         homekit_characteristic_notify(characteristic, characteristic->value);
 }
-
-homekit_service_t *custom_characteristics_service = &energy_meter_service;
 
 void custom_characteristics_update(float voltage,
                                    float current,
