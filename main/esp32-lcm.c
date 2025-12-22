@@ -408,7 +408,7 @@ static void lifecycle_schedule_restart_counter_timeout(const char *log_tag) {
     if (s_restart_counter_timer == NULL) {
         const esp_timer_create_args_t timer_args = {
             .callback = lifecycle_restart_counter_timeout,
-            .arg = (void *)LIFECYCLE_TAG,
+            .arg = (void *)tag,
             .name = "restart_cnt_reset",
         };
 
@@ -589,38 +589,97 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
 
     s_wifi_on_ready_cb = on_ready;
 
+    bool netif_created = false;
+    bool wifi_handler_registered = false;
+    bool ip_handler_registered = false;
+    bool wifi_initialized = false;
+
     err = esp_netif_init();
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(WIFI_TAG, "Failed to init netif: %s", esp_err_to_name(err));
-        return err;
+        goto wifi_start_cleanup;
     }
     err = esp_event_loop_create_default();
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(WIFI_TAG, "Failed to create default event loop: %s", esp_err_to_name(err));
-        return err;
+        goto wifi_start_cleanup;
     }
     if (s_wifi_netif == NULL) {
         s_wifi_netif = esp_netif_create_default_wifi_sta();
         if (s_wifi_netif == NULL) {
             ESP_LOGE(WIFI_TAG, "Failed to create default WiFi STA interface");
-            return ESP_ERR_NO_MEM;
+            err = ESP_ERR_NO_MEM;
+            goto wifi_start_cleanup;
         }
+        netif_created = true;
     }
 
-    WIFI_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
-    WIFI_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
+    err = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to register WiFi event handler: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
+    wifi_handler_registered = true;
+
+    err = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL);
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to register IP event handler: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
+    ip_handler_registered = true;
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    WIFI_CHECK(esp_wifi_init(&cfg));
-    WIFI_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    WIFI_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    err = esp_wifi_init(&cfg);
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to init WiFi driver: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
+    wifi_initialized = true;
 
-    WIFI_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
-    WIFI_CHECK(esp_wifi_start());
+    err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to set WiFi storage: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
+
+    err = esp_wifi_set_mode(WIFI_MODE_STA);
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to set WiFi mode: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
+
+    err = esp_wifi_set_config(WIFI_IF_STA, &wc);
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to set WiFi config: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
+
+    err = esp_wifi_start();
+    if (err != ESP_OK) {
+        ESP_LOGE(WIFI_TAG, "Failed to start WiFi driver: %s", esp_err_to_name(err));
+        goto wifi_start_cleanup;
+    }
     s_wifi_started = true;
 
     ESP_LOGI(WIFI_TAG, "WiFi start klaar (STA). Verbinden...");
     return ESP_OK;
+
+wifi_start_cleanup:
+    if (ip_handler_registered) {
+        esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler);
+    }
+    if (wifi_handler_registered) {
+        esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler);
+    }
+    if (wifi_initialized) {
+        esp_wifi_deinit();
+    }
+    if (netif_created && s_wifi_netif != NULL) {
+        esp_netif_destroy(s_wifi_netif);
+        s_wifi_netif = NULL;
+    }
+    s_wifi_on_ready_cb = NULL;
+    return err;
 }
 
 esp_err_t wifi_stop(void) {
