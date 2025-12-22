@@ -93,7 +93,7 @@ RTC_DATA_ATTR static struct {
 static char s_fw_revision[LIFECYCLE_FW_REVISION_MAX_LEN];
 static bool s_fw_revision_initialized = false;
 static esp_timer_handle_t s_restart_counter_timer = NULL;
-static char s_restart_counter_log_tag[32] = LIFECYCLE_TAG;
+static char s_restart_counter_log_tag[32] = "LIFECYCLE";
 static bool s_nvs_initialized = false;
 
 void wifi_config_shutdown(void) __attribute__((weak));

@@ -36,12 +36,14 @@ void custom_characteristic_update_float(homekit_characteristic_t *characteristic
         return;
     }
 
-    if (characteristic->value.format == homekit_format_float) {
-        float current = characteristic->value.float_value;
-        if (characteristic->min_step && *characteristic->min_step > 0.0f) {
-            if (fabsf(current - value) < *characteristic->min_step) {
-                return;
-            }
+    if (characteristic->value.format != homekit_format_float) {
+        return;
+    }
+
+    float current = characteristic->value.float_value;
+    if (characteristic->min_step && *characteristic->min_step > 0.0f) {
+        if (fabsf(current - value) < *characteristic->min_step) {
+            return;
         }
     }
 
