@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include <homekit/characteristics.h>
 #include <homekit/homekit.h>
 
@@ -117,7 +119,7 @@
 extern "C" {
 #endif
 
-homekit_service_t *custom_characteristics_service(void);
+extern homekit_service_t *custom_characteristics_service;
 
 void custom_characteristics_update(float voltage,
                                    float current,

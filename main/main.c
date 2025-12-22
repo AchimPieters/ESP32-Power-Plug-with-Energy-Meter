@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
@@ -69,6 +70,11 @@ static inline void red_led_write(bool on) {
 
 // Forward declaration van de characteristic zodat we hem in functies kunnen gebruiken
 extern homekit_characteristic_t relay_on_characteristic;
+extern homekit_characteristic_t outlet_in_use_characteristic;
+
+#ifndef CONFIG_ESP_BL0937_SEL_INVERTED
+#define CONFIG_ESP_BL0937_SEL_INVERTED 0
+#endif
 
 // Centrale functie: zet state, stuurt hardware aan en (optioneel) HomeKit-notify
 static void relay_set_state(bool on, bool notify_homekit) {
@@ -238,7 +244,7 @@ homekit_accessory_t *accessories[] = {
                         &ota_trigger,
                         NULL
                 }),
-                custom_characteristics_service(),
+                custom_characteristics_service,
                 NULL
         }),
         NULL
