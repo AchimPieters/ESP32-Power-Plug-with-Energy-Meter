@@ -159,6 +159,13 @@ static esp_err_t nvs_load_wifi(char **out_ssid, char **out_pass) {
         nvs_close(handle);
         return err;
     }
+    if (ssid[0] == '\0') {
+        ESP_LOGE(WIFI_TAG, "Stored wifi_ssid is empty");
+        free(ssid);
+        free(pass);
+        nvs_close(handle);
+        return ESP_ERR_INVALID_ARG;
+    }
 
     if (len_pass == 1) {
         pass[0] = '\0';
@@ -197,6 +204,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
+        if (event == NULL) {
+            ESP_LOGW(WIFI_TAG, "Got IP event with NULL data");
+            return;
+        }
         ESP_LOGI(WIFI_TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
         if (s_wifi_on_ready_cb != NULL) {
             s_wifi_on_ready_cb();
@@ -812,7 +823,13 @@ void lifecycle_request_update_and_reboot(void) {
     ESP_LOGI(LIFECYCLE_TAG, "Requesting Lifecycle Manager update and reboot");
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open("lcm", NVS_READWRITE, &handle);
+    esp_err_t err = lifecycle_ensure_nvs_initialized(LIFECYCLE_TAG);
+    if (err != ESP_OK) {
+        ESP_LOGE(LIFECYCLE_TAG, "Failed to initialise NVS before update: %s", esp_err_to_name(err));
+        return;
+    }
+
+    err = nvs_open("lcm", NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         ESP_LOGE(LIFECYCLE_TAG, "Failed to open NVS namespace 'lcm': %s", esp_err_to_name(err));
     } else {
