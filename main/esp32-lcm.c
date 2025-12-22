@@ -65,6 +65,7 @@ static const char *LIFECYCLE_TAG = "LIFECYCLE";
 
 static void (*s_wifi_on_ready_cb)(void) = NULL;
 static bool s_wifi_started = false;
+static bool s_wifi_stopping = false;
 static esp_netif_t *s_wifi_netif = NULL;
 
 static const uint32_t k_post_reset_magic = 0xC0DEC0DE;
@@ -194,6 +195,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
                 esp_wifi_connect();
                 break;
             case WIFI_EVENT_STA_DISCONNECTED: {
+                if (s_wifi_stopping) {
+                    ESP_LOGI(WIFI_TAG, "WiFi stopping; ignoring disconnect event");
+                    break;
+                }
                 wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)data;
                 ESP_LOGW(WIFI_TAG, "Disconnected (reason=%d). Reconnecting...", disc ? disc->reason : -1);
                 esp_wifi_connect();
@@ -690,6 +695,7 @@ esp_err_t wifi_stop(void) {
     ESP_LOGI(WIFI_TAG, "WiFi stoppen...");
 
     esp_err_t result = ESP_OK;
+    s_wifi_stopping = true;
 
     esp_err_t disconnect_err = esp_wifi_disconnect();
     if (disconnect_err != ESP_OK && disconnect_err != ESP_ERR_WIFI_NOT_STARTED &&
@@ -741,6 +747,7 @@ esp_err_t wifi_stop(void) {
 
     s_wifi_started = false;
     s_wifi_on_ready_cb = NULL;
+    s_wifi_stopping = false;
 
     ESP_LOGI(WIFI_TAG, "WiFi driver stopped");
     return result;
