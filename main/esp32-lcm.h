@@ -3,8 +3,7 @@
 #include <sdkconfig.h>
 
 #include <esp_err.h>
-#include <homekit/homekit.h>
-#include <homekit/characteristics.h>
+#include "homekit_compat.h"
 
 #ifndef __HOMEKIT_CUSTOM_CHARACTERISTICS__
 #define __HOMEKIT_CUSTOM_CHARACTERISTICS__

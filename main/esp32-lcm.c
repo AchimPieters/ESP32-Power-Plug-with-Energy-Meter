@@ -46,8 +46,7 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
-#include <homekit/homekit.h>
-#include <homekit/characteristics.h>
+#include "homekit_compat.h"
 
 #include "esp32-lcm.h"
 
