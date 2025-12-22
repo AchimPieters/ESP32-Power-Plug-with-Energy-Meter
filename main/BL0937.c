@@ -147,7 +147,7 @@ static void bl0937_task(void *arg) {
     }
     const TickType_t delay_ticks = pdMS_TO_TICKS(update_interval_ms);
     uint32_t sample_counter = 0;
-    uint32_t cycle_divider = 1000 / update_interval_ms;
+    uint32_t cycle_divider = (1000 + update_interval_ms - 1) / update_interval_ms;
 
     if (cycle_divider < 2) {
         ESP_LOGW(BL0937_TAG,
