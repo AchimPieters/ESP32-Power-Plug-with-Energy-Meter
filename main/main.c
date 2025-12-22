@@ -324,7 +324,8 @@ void app_main(void) {
         btn_cfg.max_repeat_presses = 3;
         btn_cfg.long_press_time = 10000; // 10 seconds for lifecycle_factory_reset_and_reboot
 
-        if (button_create(BUTTON_GPIO, btn_cfg, button_callback, NULL)) {
+        button_handle_t button = button_create(BUTTON_GPIO, btn_cfg, button_callback, NULL);
+        if (button == NULL) {
                 ESP_LOGE(BUTTON_TAG, "Failed to initialize button");
         }
 
