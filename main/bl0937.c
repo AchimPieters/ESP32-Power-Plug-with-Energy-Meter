@@ -144,14 +144,12 @@ void bl0937_update(bl0937_t *dev) {
     }
 
     uint32_t cf_count;
-    uint32_t cf1_count;
     uint32_t cf_period;
     uint32_t cf1_period;
     bl0937_cf1_mode_t cf1_mode;
 
     portENTER_CRITICAL(&dev->lock);
     cf_count = dev->cf_pulse_count;
-    cf1_count = dev->cf1_pulse_count;
     cf_period = dev->cf_period_us;
     cf1_period = dev->cf1_period_us;
     cf1_mode = dev->cf1_mode;
