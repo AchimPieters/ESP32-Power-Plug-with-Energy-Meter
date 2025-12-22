@@ -140,9 +140,14 @@ static float bl0937_calculate_current(uint32_t pulse_length) {
 
 static void bl0937_task(void *arg) {
     (void)arg;
-    const TickType_t delay_ticks = pdMS_TO_TICKS(bl0937_state.config.update_interval_ms);
+    uint32_t update_interval_ms = bl0937_state.config.update_interval_ms;
+    if (update_interval_ms == 0) {
+        ESP_LOGW(BL0937_TAG, "Update interval was 0 ms; defaulting to 1000 ms");
+        update_interval_ms = 1000;
+    }
+    const TickType_t delay_ticks = pdMS_TO_TICKS(update_interval_ms);
     uint32_t sample_counter = 0;
-    uint32_t cycle_divider = 1000 / bl0937_state.config.update_interval_ms;
+    uint32_t cycle_divider = 1000 / update_interval_ms;
 
     if (cycle_divider == 0) {
         cycle_divider = 1;
