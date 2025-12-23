@@ -109,6 +109,8 @@ static void lifecycle_perform_common_shutdown(bool reset_homekit_store);
 static esp_err_t load_restart_counter_from_nvs(uint32_t *out_value, const char *log_tag);
 static esp_err_t save_restart_counter_to_nvs(uint32_t value, const char *log_tag);
 static esp_err_t lifecycle_ensure_nvs_initialized(const char *log_tag);
+static void erase_nvs_partition(void);
+static void lifecycle_force_homekit_wipe(void);
 
 static esp_err_t nvs_load_wifi(char **out_ssid, char **out_pass) {
     esp_err_t init_err = lifecycle_ensure_nvs_initialized(WIFI_TAG);
@@ -429,6 +431,14 @@ static void lifecycle_schedule_restart_counter_timeout(const char *log_tag) {
             (unsigned long long)k_restart_counter_timeout_ms);
 }
 
+static void lifecycle_force_homekit_wipe(void) {
+    lifecycle_log_step("reset_homekit_store");
+    homekit_server_reset();
+
+    lifecycle_log_step("erase_nvs_partition");
+    erase_nvs_partition();
+}
+
 void lifecycle_log_post_reset_state(const char *log_tag) {
     const char *tag = (log_tag != NULL) ? log_tag : LIFECYCLE_TAG;
     uint32_t persisted_count = 0;
@@ -458,6 +468,7 @@ void lifecycle_log_post_reset_state(const char *log_tag) {
 
     if (restart_count >= 10U) {
         ESP_LOGW(tag, "[lifecycle] Detected 10 consecutive restarts; performing factory reset countdown");
+        lifecycle_force_homekit_wipe();
         for (int i = 10; i >= 0; --i) {
             ESP_LOGW(tag, "[lifecycle] Factory reset in %d", i);
             vTaskDelay(pdMS_TO_TICKS(1000));
