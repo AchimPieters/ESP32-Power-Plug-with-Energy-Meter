@@ -27,6 +27,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
+#include <stddef.h>
+
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
