@@ -43,6 +43,10 @@
 #define RELAY_GPIO       CONFIG_ESP_RELAY_GPIO
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
 
+#ifndef CONFIG_ESP_BL0937_SEL_INVERTED
+#define CONFIG_ESP_BL0937_SEL_INVERTED 0
+#endif
+
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
