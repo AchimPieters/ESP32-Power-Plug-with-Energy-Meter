@@ -1,7 +1,5 @@
 #include "custom_characteristics.h"
 
-#include <stddef.h>
-
 homekit_characteristic_t voltage_characteristic = API_VOLTAGE;
 homekit_characteristic_t current_characteristic = API_CURRENT;
 homekit_characteristic_t power_characteristic = API_POWER;
