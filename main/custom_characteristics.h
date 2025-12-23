@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include <homekit/characteristics.h>
 #include <homekit/homekit.h>
 
