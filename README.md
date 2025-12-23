@@ -1,12 +1,11 @@
 # ESP32 HomeKit Power Plug (Lifecycle Manager)
 
-This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Lifecycle Manager (LCM)** helpers. The firmware drives a relay for power control, keeps two status LEDs in sync with device state, and relies on LCM to simplify Wi‑Fi, OTA, and reset handling.
+This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Lifecycle Manager (LCM)** helpers. The firmware drives a relay for power control, keeps a single status LED in sync with device state, and relies on LCM to simplify Wi‑Fi, OTA, and reset handling.
 
 ## Features
 
 - **HomeKit outlet service** with on/off characteristic, OTA trigger, firmware revision, and accessory identification blink sequence.
 - **Relay-driven plug control:** the blue LED mirrors the relay output so you always see the current state.
-- **Connection feedback:** the red LED is on while the device is provisioning or offline, and it turns off once Wi‑Fi is ready.
 - **Button actions:**
   - Single press toggles the relay and notifies HomeKit clients.
   - Long press (10 seconds) performs a full Lifecycle Manager factory reset and reboots.
@@ -21,17 +20,16 @@ All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come f
 |---------|----------------|--------------|
 | Relay output | `CONFIG_ESP_RELAY_GPIO` | 3 |
 | Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 4 |
-| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 6 |
 | Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 7 |
 
-The blue LED follows the relay output. The red LED stays on until Wi‑Fi is connected; it also lights up when Wi‑Fi fails to start or provisioning is required.
+The blue LED follows the relay output.
 
 ## Behavior overview
 
 1. **Startup:**
    - LCM initializes NVS, logs the last reset reason, and binds the firmware revision plus OTA trigger to HomeKit.
-   - GPIOs are reset; relay and blue LED start off, red LED turns on while Wi‑Fi comes up.
-2. **Wi‑Fi ready:** `wifi_start()` invokes `on_wifi_ready()`, clears the red LED, and starts the HomeKit server once.
+   - GPIOs are reset; relay and blue LED start off.
+2. **Wi‑Fi ready:** `wifi_start()` invokes `on_wifi_ready()` and starts the HomeKit server once.
 3. **Button presses:**
    - Single press toggles the relay via `relay_set_state()` and sends a HomeKit notification.
    - Long press (10 seconds) runs `lifecycle_factory_reset_and_reboot()`.
