@@ -49,19 +49,6 @@
     ##__VA_ARGS__
 
 #define HOMEKIT_CHARACTERISTIC_CUSTOM_TOTAL_CONSUMPTION "E863F10C-079E-48FF-8F27-9C2605A29F52"
-// Latest HAP defines total consumption; keep ENERGY as an alias for backwards compatibility.
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_ENERGY HOMEKIT_CHARACTERISTIC_CUSTOM_TOTAL_CONSUMPTION
-#define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_ENERGY(_value, ...) \
-    .type = HOMEKIT_CHARACTERISTIC_CUSTOM_ENERGY, \
-    .description = "Energy", \
-    .format = homekit_format_float, \
-    .permissions = homekit_permissions_paired_read | homekit_permissions_notify, \
-    .unit = homekit_unit_none, \
-    .value = HOMEKIT_FLOAT_(_value), \
-    .min_value = (float[]) { 0.0f }, \
-    .max_value = (float[]) { 100000.0f }, \
-    .min_step = (float[]) { 0.001f }, \
-    ##__VA_ARGS__
 
 #define HOMEKIT_CHARACTERISTIC_CUSTOM_POWER_FACTOR "E863F110-079E-48FF-8F27-9C2605A29F52"
 #define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_POWER_FACTOR(_value, ...) \
@@ -104,7 +91,6 @@
 #define API_VOLTAGE HOMEKIT_CHARACTERISTIC_(CUSTOM_VOLTAGE, 0)
 #define API_CURRENT HOMEKIT_CHARACTERISTIC_(CUSTOM_CURRENT, 0)
 #define API_POWER HOMEKIT_CHARACTERISTIC_(CUSTOM_POWER, 0)
-#define API_ENERGY HOMEKIT_CHARACTERISTIC_(CUSTOM_ENERGY, 0)
 #define API_POWER_FACTOR HOMEKIT_CHARACTERISTIC_(CUSTOM_POWER_FACTOR, 0)
 #define API_FREQUENCY HOMEKIT_CHARACTERISTIC_(CUSTOM_FREQUENCY, 0)
 #define API_TOTAL_CONSUMPTION HOMEKIT_CHARACTERISTIC_(CUSTOM_TOTAL_CONSUMPTION, 0)
@@ -116,7 +102,6 @@ extern "C" {
 extern homekit_characteristic_t voltage_characteristic;
 extern homekit_characteristic_t current_characteristic;
 extern homekit_characteristic_t power_characteristic;
-extern homekit_characteristic_t energy_characteristic;
 extern homekit_characteristic_t power_factor_characteristic;
 extern homekit_characteristic_t frequency_characteristic;
 extern homekit_characteristic_t total_consumption_characteristic;
@@ -124,7 +109,6 @@ extern homekit_characteristic_t total_consumption_characteristic;
 void custom_characteristics_update(float voltage,
                                    float current,
                                    float power,
-                                   float energy,
                                    float power_factor,
                                    float frequency,
                                    float total_consumption);

@@ -137,7 +137,6 @@ static void bl0937_measurements_callback(const bl0937_measurements_t *measuremen
         custom_characteristics_update(measurements->voltage,
                                       measurements->current,
                                       measurements->power,
-                                      measurements->energy,
                                       measurements->power_factor,
                                       measurements->frequency,
                                       measurements->total_consumption);
