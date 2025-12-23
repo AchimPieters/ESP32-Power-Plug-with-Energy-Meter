@@ -211,7 +211,6 @@ homekit_accessory_t *accessories[] = {
                         &voltage_characteristic,
                         &current_characteristic,
                         &power_characteristic,
-                        &energy_characteristic,
                         &power_factor_characteristic,
                         &frequency_characteristic,
                         &total_consumption_characteristic,
