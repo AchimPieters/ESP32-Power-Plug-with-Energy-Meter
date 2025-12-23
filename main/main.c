@@ -28,6 +28,7 @@
 #include <freertos/task.h>
 #include <driver/gpio.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
@@ -41,11 +42,11 @@
 #define BUTTON_GPIO      CONFIG_ESP_BUTTON_GPIO
 #define RELAY_GPIO       CONFIG_ESP_RELAY_GPIO
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
-#define RED_LED_GPIO     CONFIG_ESP_RED_LED_GPIO   // Rode LED: WiFi/lifecycle-indicator
 
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
+static const char *ENERGY_TAG  = "ENERGY";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
@@ -59,11 +60,6 @@ static inline void relay_write(bool on) {
 static inline void blue_led_write(bool on) {
         // Blauwe LED: uitsluitend als aan/uit-indicator voor de relay (active low/high afhankelijk van hardware)
         gpio_set_level(BLUE_LED_GPIO, on ? 1 : 0);
-}
-
-static inline void red_led_write(bool on) {
-        // Rode LED is active high: 1 = AAN, 0 = UIT
-        gpio_set_level(RED_LED_GPIO, on ? 1 : 0);
 }
 
 // Forward declaration van de characteristic zodat we hem in functies kunnen gebruiken
@@ -108,19 +104,12 @@ void gpio_init(void) {
         gpio_reset_pin(BLUE_LED_GPIO);
         gpio_set_direction(BLUE_LED_GPIO, GPIO_MODE_OUTPUT);
 
-        // Rode LED: WiFi-status-indicator
-        gpio_reset_pin(RED_LED_GPIO);
-        gpio_set_direction(RED_LED_GPIO, GPIO_MODE_OUTPUT);
-
         // Initial state: alles uit, in sync brengen
         relay_on = false;
         relay_on_characteristic.value = HOMEKIT_BOOL(false);
         outlet_in_use_characteristic.value = HOMEKIT_BOOL(false);
         relay_write(false);
         blue_led_write(false);
-
-        // Bij start is er nog geen WiFi -> rode LED AAN
-        red_led_write(true);
 }
 
 // ---------- Accessory identification (Blue LED) ----------
@@ -264,9 +253,6 @@ void button_callback(button_event_t event, void *context) {
 void on_wifi_ready() {
         static bool homekit_started = false;
 
-        // WiFi is nu up -> rode LED uit
-        red_led_write(false);
-
         if (homekit_started) {
                 ESP_LOGI("INFORMATION", "HomeKit server already running; skipping re-initialization");
                 return;
@@ -275,6 +261,22 @@ void on_wifi_ready() {
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
         homekit_started = true;
+}
+
+static void bl0937_update_measurements(const bl0937_measurements_t *measurements,
+                                       void *context) {
+        if (!measurements) {
+                return;
+        }
+
+        custom_characteristics_update(measurements->voltage,
+                                      measurements->current,
+                                      measurements->power,
+                                      measurements->power_factor,
+                                      measurements->frequency,
+                                      measurements->total_consumption);
+
+        (void)context;
 }
 
 // ---------- app_main ----------
@@ -286,7 +288,26 @@ void app_main(void) {
 
         gpio_init();
 
-        bl0937_start_default();
+        bl0937_config_t bl0937_config = {
+                .cf_gpio = CONFIG_ESP_BL0937_CF_GPIO,
+                .cf1_gpio = CONFIG_ESP_BL0937_CF1_GPIO,
+                .sel_gpio = CONFIG_ESP_BL0937_SEL_GPIO,
+                .sel_inverted = CONFIG_ESP_BL0937_SEL_INVERTED,
+                .voltage_calibration = strtof(CONFIG_ESP_BL0937_VOLTAGE_CAL, NULL),
+                .current_calibration = strtof(CONFIG_ESP_BL0937_CURRENT_CAL, NULL),
+                .power_calibration = strtof(CONFIG_ESP_BL0937_POWER_CAL, NULL),
+                .power_max_watts = strtof(CONFIG_ESP_BL0937_POWER_MAX, NULL),
+                .frequency_hz = strtof(CONFIG_ESP_BL0937_FREQUENCY_HZ, NULL),
+                .sample_period_ms = CONFIG_ESP_BL0937_SAMPLE_PERIOD_MS,
+        };
+
+        esp_err_t bl0937_err = bl0937_start(&bl0937_config,
+                                            bl0937_update_measurements,
+                                            NULL);
+        if (bl0937_err != ESP_OK) {
+                ESP_LOGE(ENERGY_TAG, "Failed to start BL0937: %s",
+                         esp_err_to_name(bl0937_err));
+        }
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
@@ -299,11 +320,7 @@ void app_main(void) {
         esp_err_t wifi_err = wifi_start(on_wifi_ready);
         if (wifi_err == ESP_ERR_NVS_NOT_FOUND) {
                 ESP_LOGW("WIFI", "WiFi configuration not found; provisioning required");
-                // Geen geldige WiFi-config -> rode LED AAN
-                red_led_write(true);
         } else if (wifi_err != ESP_OK) {
                 ESP_LOGE("WIFI", "Failed to start WiFi: %s", esp_err_to_name(wifi_err));
-                // Fout bij starten WiFi -> rode LED AAN
-                red_led_write(true);
         }
 }
