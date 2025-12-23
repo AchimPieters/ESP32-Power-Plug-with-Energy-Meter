@@ -25,66 +25,6 @@ menu "StudioPieters"
               help
                   GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
 
-      config ESP_BL0937_CF_GPIO
-              int "BL0937 CF GPIO"
-              default 4
-              help
-                  GPIO for the BL0937 CF (power pulse) output.
-
-      config ESP_BL0937_CF1_GPIO
-              int "BL0937 CF1 GPIO"
-              default 5
-              help
-                  GPIO for the BL0937 CF1 (voltage/current pulse) output.
-
-      config ESP_BL0937_SEL_GPIO
-              int "BL0937 SEL GPIO"
-              default 21
-              help
-                  GPIO for the BL0937 SEL pin to switch between voltage and current measurements.
-
-      config ESP_BL0937_SEL_INVERTED
-              bool "BL0937 SEL inverted"
-              default n
-              help
-                  Invert the SEL signal if your hardware uses an active-low SEL pin.
-
-      config ESP_BL0937_VOLTAGE_CAL
-              string "BL0937 voltage calibration"
-              default "0.1325301"
-              help
-                  Calibration factor for voltage pulses (pulses per volt).
-
-      config ESP_BL0937_CURRENT_CAL
-              string "BL0937 current calibration"
-              default "0.0118577"
-              help
-                  Calibration factor for current pulses (pulses per ampere).
-
-      config ESP_BL0937_POWER_CAL
-              string "BL0937 power calibration"
-              default "1.5"
-              help
-                  Calibration factor for power pulses (pulses per watt).
-
-      config ESP_BL0937_POWER_MAX
-              string "BL0937 max power"
-              default "3680.0"
-              help
-                  Maximum power in watts; values above this are treated as invalid.
-
-      config ESP_BL0937_FREQUENCY_HZ
-              string "BL0937 line frequency"
-              default "50.0"
-              help
-                  Line frequency reported to HomeKit (Hz).
-
-      config ESP_BL0937_SAMPLE_PERIOD_MS
-              int "BL0937 sample period (ms)"
-              default 1000
-              help
-                  Sample window for BL0937 pulse accumulation.
-
       config ESP_SETUP_CODE
               string "HomeKit Setup Code"
               default "693-41-208"
