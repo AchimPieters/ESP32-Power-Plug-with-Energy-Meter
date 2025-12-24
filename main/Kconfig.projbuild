@@ -15,7 +15,7 @@ menu "StudioPieters"
 
       config ESP_RED_LED_GPIO
               int "Set the GPIO for the red LED"
-              default 8
+              default 6
               help
                   The GPIO number the red LED is connected to.
 
