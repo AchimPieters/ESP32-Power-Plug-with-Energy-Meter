@@ -292,7 +292,11 @@ void app_main(void) {
                 .cf_gpio = CONFIG_ESP_BL0937_CF_GPIO,
                 .cf1_gpio = CONFIG_ESP_BL0937_CF1_GPIO,
                 .sel_gpio = CONFIG_ESP_BL0937_SEL_GPIO,
+#ifdef CONFIG_ESP_BL0937_SEL_INVERTED
                 .sel_inverted = CONFIG_ESP_BL0937_SEL_INVERTED,
+#else
+                .sel_inverted = false,
+#endif
                 .voltage_calibration = strtof(CONFIG_ESP_BL0937_VOLTAGE_CAL, NULL),
                 .current_calibration = strtof(CONFIG_ESP_BL0937_CURRENT_CAL, NULL),
                 .power_calibration = strtof(CONFIG_ESP_BL0937_POWER_CAL, NULL),
