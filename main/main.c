@@ -33,6 +33,8 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+#include "bl0937.h"
+#include "custom_characteristics.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -207,6 +209,11 @@ homekit_accessory_t *accessories[] = {
                 HOMEKIT_SERVICE(OUTLET, .primary = true, .characteristics = (homekit_characteristic_t *[]) {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
+                        &outlet_in_use_characteristic,
+                        &voltage_characteristic,
+                        &current_characteristic,
+                        &power_characteristic,
+                        &total_consumption_characteristic,
                         &ota_trigger,
                         NULL
                 }),
