@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include <esp_log.h>
 #include <homekit/characteristics.h>
 #include <homekit/homekit.h>
