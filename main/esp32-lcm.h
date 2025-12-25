@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <sdkconfig.h>
 
 #include <esp_err.h>
