@@ -1,3 +1,6 @@
+// Custom HomeKit energy characteristics used by the BL0937 energy monitor.
+// These globals are referenced directly from the accessory definition to expose
+// voltage, current, power, power factor, frequency, and accumulated energy.
 #include "custom_characteristics.h"
 
 homekit_characteristic_t voltage_characteristic = API_VOLTAGE;
