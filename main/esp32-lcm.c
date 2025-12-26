@@ -607,10 +607,19 @@ esp_err_t wifi_start(void (*on_ready)(void)) {
   WIFI_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
   WIFI_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
-  WIFI_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
-  WIFI_CHECK(esp_wifi_start());
-
   s_wifi_on_ready_cb = on_ready;
+
+  esp_err_t start_err = esp_wifi_set_config(WIFI_IF_STA, &wc);
+  if (start_err == ESP_OK) {
+    start_err = esp_wifi_start();
+  }
+
+  if (start_err != ESP_OK) {
+    ESP_LOGE(WIFI_TAG, "Failed to start WiFi: %s", esp_err_to_name(start_err));
+    s_wifi_on_ready_cb = NULL;
+    return start_err;
+  }
+
   s_wifi_started = true;
 
   ESP_LOGI(WIFI_TAG, "WiFi start klaar (STA). Verbinden...");
