@@ -3,7 +3,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
-#include <math.h>
 
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
@@ -23,8 +22,10 @@ static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
 static const char *CFG_TAG     = "gpio_cfg";
 static const char *ENERGY_TAG  = "energy";
+static const char *INFO_TAG    = "INFORMATION";
 
 static bool relay_on = false;
+static bool homekit_started = false;
 
 extern homekit_characteristic_t relay_on_characteristic;
 extern homekit_characteristic_t outlet_in_use_characteristic;
@@ -64,6 +65,12 @@ static inline void relay_write(bool on)     { gpio_set_level(RELAY_GPIO, on ? 1 
 static inline void blue_led_write(bool on)  { gpio_set_level(BLUE_LED_GPIO, on ? 1 : 0); }
 static inline void red_led_write(bool on)   { gpio_set_level(RED_LED_GPIO, on ? 1 : 0); }
 
+static inline void update_characteristics(bool on)
+{
+    relay_on_characteristic.value = HOMEKIT_BOOL(on);
+    outlet_in_use_characteristic.value = HOMEKIT_BOOL(on);
+}
+
 /**
  * IMPORTANT (bulletproof rule):
  * Do NOT call homekit_characteristic_notify() from here (button task / wifi task / etc).
@@ -79,8 +86,7 @@ static void relay_set_state(bool on) {
     ESP_LOGI(RELAY_TAG, "Relay state -> %s", relay_on ? "ON" : "OFF");
 
     // Keep a local snapshot value (HomeKit reads via getter too).
-    relay_on_characteristic.value = HOMEKIT_BOOL(relay_on);
-    outlet_in_use_characteristic.value = HOMEKIT_BOOL(relay_on);
+    update_characteristics(relay_on);
 }
 
 void gpio_init(void) {
@@ -94,8 +100,7 @@ void gpio_init(void) {
     gpio_set_direction(RED_LED_GPIO, GPIO_MODE_OUTPUT);
 
     relay_on = false;
-    relay_on_characteristic.value = HOMEKIT_BOOL(false);
-    outlet_in_use_characteristic.value = HOMEKIT_BOOL(false);
+    update_characteristics(false);
 
     relay_write(false);
     blue_led_write(false);
@@ -167,27 +172,21 @@ static bool bl0937_try_read(bl0937_reading_t *out) {
     return false;
 }
 
-static homekit_value_t voltage_get(void) {
+static float read_voltage(const bl0937_reading_t *r) { return r->voltage_v; }
+static float read_current(const bl0937_reading_t *r) { return r->current_a; }
+static float read_power(const bl0937_reading_t *r) { return r->power_w; }
+static float read_total_consumption(const bl0937_reading_t *r) { return r->energy_wh / 1000.0f; }
+
+static homekit_value_t read_energy_value(float (*extractor)(const bl0937_reading_t *)) {
     bl0937_reading_t r;
     if (!bl0937_try_read(&r)) return HOMEKIT_FLOAT(0.0f);
-    return HOMEKIT_FLOAT(r.voltage_v);
+    return HOMEKIT_FLOAT(extractor(&r));
 }
-static homekit_value_t current_get(void) {
-    bl0937_reading_t r;
-    if (!bl0937_try_read(&r)) return HOMEKIT_FLOAT(0.0f);
-    return HOMEKIT_FLOAT(r.current_a);
-}
-static homekit_value_t power_get(void) {
-    bl0937_reading_t r;
-    if (!bl0937_try_read(&r)) return HOMEKIT_FLOAT(0.0f);
-    return HOMEKIT_FLOAT(r.power_w);
-}
-static homekit_value_t total_consumption_get(void) {
-    bl0937_reading_t r;
-    if (!bl0937_try_read(&r)) return HOMEKIT_FLOAT(0.0f);
-    // expose kWh
-    return HOMEKIT_FLOAT(r.energy_wh / 1000.0f);
-}
+
+static homekit_value_t voltage_get(void)           { return read_energy_value(read_voltage); }
+static homekit_value_t current_get(void)           { return read_energy_value(read_current); }
+static homekit_value_t power_get(void)             { return read_energy_value(read_power); }
+static homekit_value_t total_consumption_get(void) { return read_energy_value(read_total_consumption); }
 
 // We keep a handle to ON characteristic
 homekit_characteristic_t relay_on_characteristic =
@@ -262,8 +261,14 @@ void on_wifi_ready() {
     // WiFi up
     red_led_write(false);
 
-    ESP_LOGI("INFORMATION", "Starting HomeKit server...");
+    if (homekit_started) {
+        ESP_LOGI(INFO_TAG, "HomeKit server already running; ignoring duplicate Wi-Fi ready callback");
+        return;
+    }
+
+    ESP_LOGI(INFO_TAG, "Starting HomeKit server...");
     homekit_server_init(&config);
+    homekit_started = true;
 }
 
 // ---------- app_main ----------
