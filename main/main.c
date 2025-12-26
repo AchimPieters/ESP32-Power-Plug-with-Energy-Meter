@@ -33,7 +33,7 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
-#include "bl0937.h"
+
 #include "custom_characteristics.h"
 #include <button.h>
 
@@ -210,12 +210,6 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &outlet_in_use_characteristic,
-                        &voltage_characteristic,
-                        &current_characteristic,
-                        &power_characteristic,
-                        &power_factor_characteristic,
-                        &frequency_characteristic,
-                        &total_consumption_characteristic,
                         &ota_trigger,
                         NULL
                 }),
@@ -285,8 +279,6 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
-
-        bl0937_start_default();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
