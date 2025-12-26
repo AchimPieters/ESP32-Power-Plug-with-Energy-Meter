@@ -17,7 +17,7 @@
     .description = "Voltage", \
     .format = homekit_format_float, \
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify, \
-    .unit = homekit_unit_none, \
+    .unit = homekit_unit_volts, \
     .value = HOMEKIT_FLOAT_(_value), \
     .min_value = (float[]) { 0.0f }, \
     .max_value = (float[]) { 300.0f }, \
@@ -30,7 +30,7 @@
     .description = "Current", \
     .format = homekit_format_float, \
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify, \
-    .unit = homekit_unit_none, \
+    .unit = homekit_unit_amperes, \
     .value = HOMEKIT_FLOAT_(_value), \
     .min_value = (float[]) { 0.0f }, \
     .max_value = (float[]) { 16.0f }, \
@@ -43,7 +43,7 @@
     .description = "Power", \
     .format = homekit_format_float, \
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify, \
-    .unit = homekit_unit_none, \
+    .unit = homekit_unit_watts, \
     .value = HOMEKIT_FLOAT_(_value), \
     .min_value = (float[]) { 0.0f }, \
     .max_value = (float[]) { 4000.0f }, \
@@ -71,7 +71,7 @@
     .description = "Frequency", \
     .format = homekit_format_float, \
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify, \
-    .unit = homekit_unit_none, \
+    .unit = homekit_unit_hertz, \
     .value = HOMEKIT_FLOAT_(_value), \
     .min_value = (float[]) { 0.0f }, \
     .max_value = (float[]) { 100.0f }, \
@@ -83,7 +83,7 @@
     .description = "TotalConsumption", \
     .format = homekit_format_float, \
     .permissions = homekit_permissions_paired_read | homekit_permissions_notify, \
-    .unit = homekit_unit_none, \
+    .unit = homekit_unit_kilowatt_hours, \
     .value = HOMEKIT_FLOAT_(_value), \
     .min_value = (float[]) { 0.0f }, \
     .max_value = (float[]) { 100000.0f }, \
