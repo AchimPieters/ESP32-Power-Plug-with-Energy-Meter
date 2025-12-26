@@ -1,11 +1,11 @@
 #pragma once
 
-#include <stddef.h>
 #include <sdkconfig.h>
+#include <stddef.h>
 
 #include <esp_err.h>
-#include <homekit/homekit.h>
 #include <homekit/characteristics.h>
+#include <homekit/homekit.h>
 
 #ifndef __HOMEKIT_CUSTOM_CHARACTERISTICS__
 #define __HOMEKIT_CUSTOM_CHARACTERISTICS__
@@ -14,16 +14,15 @@
 
 #define HOMEKIT_SERVICE_CUSTOM_SETUP HOMEKIT_CUSTOM_UUID("000000FF")
 
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_OTA_TRIGGER HOMEKIT_CUSTOM_UUID("F0000001")
-#define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_OTA_TRIGGER(_value, ...) \
-    .type = HOMEKIT_CHARACTERISTIC_CUSTOM_OTA_TRIGGER, \
-    .description = "FirmwareUpdate", \
-    .format = homekit_format_bool, \
-    .permissions = homekit_permissions_paired_read \
-        | homekit_permissions_paired_write \
-        | homekit_permissions_notify, \
-    .value = HOMEKIT_BOOL_(_value), \
-    ##__VA_ARGS__
+#define HOMEKIT_CHARACTERISTIC_CUSTOM_OTA_TRIGGER                              \
+  HOMEKIT_CUSTOM_UUID("F0000001")
+#define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_OTA_TRIGGER(_value, ...)         \
+  .type = HOMEKIT_CHARACTERISTIC_CUSTOM_OTA_TRIGGER,                           \
+  .description = "FirmwareUpdate", .format = homekit_format_bool,              \
+  .permissions = homekit_permissions_paired_read |                             \
+                 homekit_permissions_paired_write |                            \
+                 homekit_permissions_notify,                                   \
+  .value = HOMEKIT_BOOL_(_value), ##__VA_ARGS__
 
 #define API_OTA_TRIGGER HOMEKIT_CHARACTERISTIC_(CUSTOM_OTA_TRIGGER, false)
 
@@ -44,15 +43,16 @@ extern "C" {
 #endif
 
 typedef enum {
-    LIFECYCLE_POST_RESET_NONE = 0,
-    LIFECYCLE_POST_RESET_REASON_HOMEKIT = 1,
-    LIFECYCLE_POST_RESET_REASON_FACTORY = 2,
-    LIFECYCLE_POST_RESET_REASON_UPDATE = 3,
+  LIFECYCLE_POST_RESET_NONE = 0,
+  LIFECYCLE_POST_RESET_REASON_HOMEKIT = 1,
+  LIFECYCLE_POST_RESET_REASON_FACTORY = 2,
+  LIFECYCLE_POST_RESET_REASON_UPDATE = 3,
 } lifecycle_post_reset_reason_t;
 
 void lifecycle_log_post_reset_state(const char *log_tag);
 
-// Initialiseer NVS en voer automatische herstelactie uit wanneer er geen ruimte is of versie verandert.
+// Initialiseer NVS en voer automatische herstelactie uit wanneer er geen ruimte
+// is of versie verandert.
 esp_err_t lifecycle_nvs_init(void);
 
 // Lifecycle acties die ook door externe triggers aangeroepen kunnen worden.
@@ -68,7 +68,8 @@ esp_err_t lifecycle_init_firmware_revision(homekit_characteristic_t *revision,
 // has been initialised yet.
 const char *lifecycle_get_firmware_revision_string(void);
 
-// Verwerk de custom HomeKit OTA trigger. Gebruik dit als setter van de characteristic.
+// Verwerk de custom HomeKit OTA trigger. Gebruik dit als setter van de
+// characteristic.
 void lifecycle_handle_ota_trigger(homekit_characteristic_t *characteristic,
                                   const homekit_value_t value);
 
@@ -80,8 +81,8 @@ esp_err_t lifecycle_configure_homekit(homekit_characteristic_t *revision,
                                       homekit_characteristic_t *ota_trigger,
                                       const char *log_tag);
 
-// Start WiFi STA op basis van NVS keys (namespace: wifi_cfg, keys: wifi_ssid, wifi_password).
-// Roep 'on_ready' aan zodra IP is verkregen.
+// Start WiFi STA op basis van NVS keys (namespace: wifi_cfg, keys: wifi_ssid,
+// wifi_password). Roep 'on_ready' aan zodra IP is verkregen.
 esp_err_t wifi_start(void (*on_ready)(void));
 
 // Optioneel: stop WiFi netjes.
