@@ -23,6 +23,7 @@
 
 #include <esp_log.h>
 #include <esp_err.h>
+#include <esp_check.h>
 #include <nvs.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -46,6 +47,7 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
+static const char *GPIO_TAG    = "GPIO";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
@@ -64,6 +66,18 @@ static inline void blue_led_write(bool on) {
 static inline void red_led_write(bool on) {
         // Rode LED is active high: 1 = AAN, 0 = UIT
         gpio_set_level(RED_LED_GPIO, on ? 1 : 0);
+}
+
+static esp_err_t validate_output_gpio(gpio_num_t gpio, const char *name) {
+        ESP_RETURN_ON_FALSE(GPIO_IS_VALID_OUTPUT_GPIO(gpio), ESP_ERR_INVALID_ARG, GPIO_TAG,
+                            "%s GPIO %d is not output-capable on %s", name, gpio, CONFIG_IDF_TARGET);
+        return ESP_OK;
+}
+
+static esp_err_t validate_input_gpio(gpio_num_t gpio, const char *name) {
+        ESP_RETURN_ON_FALSE(GPIO_IS_VALID_GPIO(gpio), ESP_ERR_INVALID_ARG, GPIO_TAG,
+                            "%s GPIO %d is not input-capable on %s", name, gpio, CONFIG_IDF_TARGET);
+        return ESP_OK;
 }
 
 // Forward declaration van de characteristic zodat we hem in functies kunnen gebruiken
@@ -100,6 +114,11 @@ static void relay_set_state(bool on, bool notify_homekit) {
 
 // All GPIO Settings
 void gpio_init(void) {
+        ESP_ERROR_CHECK(validate_output_gpio(RELAY_GPIO, "Relay"));
+        ESP_ERROR_CHECK(validate_output_gpio(BLUE_LED_GPIO, "Blue LED"));
+        ESP_ERROR_CHECK(validate_output_gpio(RED_LED_GPIO, "Red LED"));
+        ESP_ERROR_CHECK(validate_input_gpio(BUTTON_GPIO, "Button"));
+
         // Relay
         gpio_reset_pin(RELAY_GPIO);
         gpio_set_direction(RELAY_GPIO, GPIO_MODE_OUTPUT);

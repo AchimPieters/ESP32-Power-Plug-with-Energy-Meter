@@ -41,9 +41,15 @@ The blue LED follows the relay output. The red LED stays on until Wi‑Fi is con
 
 Prerequisites are declared in `main/idf_component.yml`:
 
-- ESP-IDF `>= 5.0`
-- `achimpieters/esp32-homekit >= 1.3.3`
-- `achimpieters/esp32-button >= 1.2.3`
+- ESP-IDF `>= 5.4` (tested with 5.4+ to track Espressif's current LTS cadence)
+- `achimpieters/esp32-homekit >= 1.4.4`
+- `achimpieters/esp32-button >= 1.3.0`
+
+The component manifest also declares supported targets so the project can be built for Wi‑Fi capable ESP32 variants (`esp32`, `esp32s2`, `esp32s3`, `esp32c2`, `esp32c3`, `esp32c6`). Set your target explicitly before building:
+
+```bash
+idf.py set-target esp32c3   # pick the chip you are flashing
+```
 
 Typical workflow:
 

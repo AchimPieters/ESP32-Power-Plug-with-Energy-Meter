@@ -133,6 +133,10 @@ esp_err_t bl0937_init(const bl0937_config_t *config) {
         ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config is null");
         ESP_RETURN_ON_FALSE(config->cf_gpio >= 0 && config->cf1_gpio >= 0 && config->sel_gpio >= 0,
                             ESP_ERR_INVALID_ARG, TAG, "invalid GPIO selection");
+        ESP_RETURN_ON_FALSE(GPIO_IS_VALID_GPIO(config->cf_gpio) &&
+                            GPIO_IS_VALID_GPIO(config->cf1_gpio) &&
+                            GPIO_IS_VALID_OUTPUT_GPIO(config->sel_gpio),
+                            ESP_ERR_INVALID_ARG, TAG, "GPIO selection not supported on target %s", CONFIG_IDF_TARGET);
         ESP_RETURN_ON_FALSE(bl0937_task_handle == NULL, ESP_ERR_INVALID_STATE, TAG,
                             "driver already initialised");
 
