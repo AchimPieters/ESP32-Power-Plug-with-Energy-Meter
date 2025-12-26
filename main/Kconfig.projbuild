@@ -1,40 +1,122 @@
 menu "StudioPieters"
 
+    comment "ESP32-WROOM-32: Avoid GPIO6..11 (SPI flash). Avoid GPIO1/3 if you want UART logging."
+    comment "Strap pins (0,2,4,5,12,15) are usable but can break boot if pulled wrong at reset."
 
-      config ESP_RELAY_GPIO
-              int "Set the GPIO for the Relay"
-              default 6
-              help
-                  The GPIO number the Relay is connected to.
+    config ESP_RELAY_GPIO
+        int "Relay GPIO"
+        default 16 if IDF_TARGET_ESP32
+        default 6  if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            GPIO driving the relay transistor/driver.
+            For ESP32: must be output-capable (0..33). Do NOT use GPIO6..11 (flash).
 
-      config ESP_BLUE_LED_GPIO
-              int "Set the GPIO for the blue LED"
-              default 20
-              help
-                  The GPIO number the blue LED is connected to.
+    config ESP_BLUE_LED_GPIO
+        int "Blue LED GPIO"
+        default 2  if IDF_TARGET_ESP32
+        default 20 if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            GPIO driving blue LED.
+            Note: GPIO2 is a boot strap pin; OK on most devkits/onboard LEDs.
 
-      config ESP_RED_LED_GPIO
-              int "Set the GPIO for the red LED"
-              default 3
-              help
-                  The GPIO number the red LED is connected to.
+    config ESP_RED_LED_GPIO
+        int "Red LED GPIO"
+        default 19 if IDF_TARGET_ESP32
+        default 3  if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            GPIO driving red LED.
 
-      config ESP_BUTTON_GPIO
-              int "Button GPIO"
-              default 7
-              help
-                  GPIO van de knop (actief laag als je button_config_default(button_active_low) gebruikt).
+    config ESP_BUTTON_GPIO
+        int "Button GPIO"
+        default 23 if IDF_TARGET_ESP32
+        default 7  if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            Button input GPIO (active-low if using button_active_low).
+            If using GPIO34..39 on ESP32: these pins are input-only and have NO internal pullups.
 
-      config ESP_SETUP_CODE
-              string "HomeKit Setup Code"
-              default "693-41-208"
-              help
-                  If you want to change the HomeKit Setup Code, you can do that here (Note:  you need to make a new QR-CODE To make it work)
+    config ESP_SETUP_CODE
+        string "HomeKit Setup Code"
+        default "693-41-208"
+        help
+            Changing this requires generating a new QR code.
 
-      config ESP_SETUP_ID
-              string "HomeKit Setup ID"
-              default "M4T8"
-              help
-                   If you want to change the HomeKit Setup ID, you can do that here (Note: you need to make a new QR-CODE To make it work)
+    config ESP_SETUP_ID
+        string "HomeKit Setup ID"
+        default "M4T8"
+        help
+            Changing this requires generating a new QR code.
+
+endmenu
+
+
+menu "BL0937 Energy Monitor"
+
+    comment "ESP32 notes: CF/CF1 are pulse outputs (inputs to ESP32). SEL is a control pin (output from ESP32)."
+    comment "Recommended: CF=34, CF1=35 (input-only pins are perfect), SEL=25 (safe output)."
+
+    config ESP_BL0937_CF_GPIO
+        int "CF GPIO (pulse input)"
+        default 34 if IDF_TARGET_ESP32
+        default 4  if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            BL0937 CF output -> ESP32 input (pulse count).
+
+    config ESP_BL0937_CF1_GPIO
+        int "CF1 GPIO (pulse input)"
+        default 35 if IDF_TARGET_ESP32
+        default 5  if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            BL0937 CF1 output -> ESP32 input (pulse count).
+
+    config ESP_BL0937_SEL_GPIO
+        int "SEL GPIO (output)"
+        default 25 if IDF_TARGET_ESP32
+        default 21 if IDF_TARGET_ESP32C3
+        range 0 39
+        help
+            BL0937 SEL control -> ESP32 output.
+            On ESP32: must be output-capable (0..33). Do NOT use GPIO34..39.
+
+    config ESP_BL0937_SAMPLE_MS
+        int "Sample window (ms)"
+        default 200
+        range 50 5000
+        help
+            Measurement window in milliseconds.
+
+    config ESP_BL0937_SEL_SETTLE_US
+        int "SEL settle time (us)"
+        default 20
+        range 1 200
+        help
+            Delay after toggling SEL before counting CF1 pulses.
+
+    config ESP_BL0937_PCNT_FILTER_US
+        int "PCNT glitch filter (us)"
+        default 2
+        range 0 50
+        help
+            Glitch filter. Keep small; BL0937 pulses are much wider than a few microseconds.
+
+    config ESP_BL0937_CAL_POWER_MW_PER_HZ
+        int "Power calibration (mW per Hz)"
+        default 1000
+        range 1 1000000
+
+    config ESP_BL0937_CAL_VOLT_MV_PER_HZ
+        int "Voltage calibration (mV per Hz)"
+        default 1000
+        range 1 1000000
+
+    config ESP_BL0937_CAL_CURR_MA_PER_HZ
+        int "Current calibration (mA per Hz)"
+        default 1000
+        range 1 1000000
 
 endmenu
