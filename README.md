@@ -15,14 +15,17 @@ This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Life
 
 ## Hardware connections
 
-All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come from `main/Kconfig.projbuild`:
+All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come from `main/Kconfig.projbuild` and are tailored per ESP32 family to stay within each package's pinout:
 
-| Purpose | Kconfig option | Default GPIO |
-|---------|----------------|--------------|
-| Relay output | `CONFIG_ESP_RELAY_GPIO` | 3 |
-| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 4 |
-| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 6 |
-| Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 7 |
+| Target | Relay (`CONFIG_ESP_RELAY_GPIO`) | Blue LED (`CONFIG_ESP_BLUE_LED_GPIO`) | Red LED (`CONFIG_ESP_RED_LED_GPIO`) | Button (`CONFIG_ESP_BUTTON_GPIO`) | BL0937 CF (`CONFIG_ESP_BL0937_CF_GPIO`) | BL0937 CF1 (`CONFIG_ESP_BL0937_CF1_GPIO`) | BL0937 SEL (`CONFIG_ESP_BL0937_SEL_GPIO`) |
+|--------|---------------------------------|---------------------------------------|-------------------------------------|-----------------------------------|-------------------------------------------|---------------------------------------------|---------------------------------------------|
+| ESP32 | 16 | 2 | 19 | 23 | 34 | 35 | 25 |
+| ESP32-S2 | 18 | 17 | 16 | 15 | 6 | 7 | 18 |
+| ESP32-S3 | 18 | 17 | 16 | 15 | 6 | 7 | 18 |
+| ESP32-C2 | 4 | 3 | 2 | 1 | 8 | 9 | 10 |
+| ESP32-C3 | 6 | 20 | 3 | 7 | 4 | 5 | 21 |
+| ESP32-C5 | 6 | 7 | 3 | 5 | 8 | 9 | 18 |
+| ESP32-C6 | 6 | 7 | 3 | 5 | 8 | 9 | 18 |
 
 The blue LED follows the relay output. The red LED stays on until Wi‑Fi is connected; it also lights up when Wi‑Fi fails to start or provisioning is required.
 
@@ -53,6 +56,11 @@ idf.py menuconfig              # set GPIOs and HomeKit setup credentials
 idf.py build
 idf.py flash monitor
 ```
+
+### Target compatibility
+
+- The firmware is **Wi‑Fi only**. Builds are blocked at compile time when targeting non-Wi‑Fi MCUs (for example ESP32-H2 or ESP32-P4).
+- GPIO defaults are provided for ESP32, ESP32-S2/S3, ESP32-C2/C3/C5/C6 families; adjust them in `menuconfig` if your board wiring differs.
 
 After provisioning Wi‑Fi, the outlet appears in HomeKit with the configured setup code (`CONFIG_ESP_SETUP_CODE`) and setup ID (`CONFIG_ESP_SETUP_ID`).
 

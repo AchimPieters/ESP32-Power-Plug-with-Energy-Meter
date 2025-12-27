@@ -6,7 +6,12 @@ menu "StudioPieters"
         int "Relay GPIO"
         default 16 if IDF_TARGET_ESP32
         default 6  if IDF_TARGET_ESP32C3
-        range 0 39
+        default 18 if IDF_TARGET_ESP32S2
+        default 18 if IDF_TARGET_ESP32S3
+        default 4  if IDF_TARGET_ESP32C2
+        default 6  if IDF_TARGET_ESP32C5
+        default 6  if IDF_TARGET_ESP32C6
+        range 0 48
         help
             GPIO driving the relay transistor/driver.
             For ESP32: must be output-capable (0..33). Do NOT use GPIO6..11 (flash).
@@ -15,7 +20,12 @@ menu "StudioPieters"
         int "Blue LED GPIO"
         default 2  if IDF_TARGET_ESP32
         default 20 if IDF_TARGET_ESP32C3
-        range 0 39
+        default 17 if IDF_TARGET_ESP32S2
+        default 17 if IDF_TARGET_ESP32S3
+        default 3  if IDF_TARGET_ESP32C2
+        default 7  if IDF_TARGET_ESP32C5
+        default 7  if IDF_TARGET_ESP32C6
+        range 0 48
         help
             GPIO driving blue LED.
             Note: GPIO2 is a boot strap pin; OK on most devkits/onboard LEDs.
@@ -24,7 +34,12 @@ menu "StudioPieters"
         int "Red LED GPIO"
         default 19 if IDF_TARGET_ESP32
         default 3  if IDF_TARGET_ESP32C3
-        range 0 39
+        default 16 if IDF_TARGET_ESP32S2
+        default 16 if IDF_TARGET_ESP32S3
+        default 2  if IDF_TARGET_ESP32C2
+        default 3  if IDF_TARGET_ESP32C5
+        default 3  if IDF_TARGET_ESP32C6
+        range 0 48
         help
             GPIO driving red LED.
 
@@ -32,7 +47,12 @@ menu "StudioPieters"
         int "Button GPIO"
         default 23 if IDF_TARGET_ESP32
         default 7  if IDF_TARGET_ESP32C3
-        range 0 39
+        default 15 if IDF_TARGET_ESP32S2
+        default 15 if IDF_TARGET_ESP32S3
+        default 1  if IDF_TARGET_ESP32C2
+        default 5  if IDF_TARGET_ESP32C5
+        default 5  if IDF_TARGET_ESP32C6
+        range 0 48
         help
             Button input GPIO (active-low if using button_active_low).
             If using GPIO34..39 on ESP32: these pins are input-only and have NO internal pullups.
@@ -57,7 +77,12 @@ menu "BL0937 Energy Monitor"
         int "CF GPIO (pulse input)"
         default 34 if IDF_TARGET_ESP32
         default 4  if IDF_TARGET_ESP32C3
-        range 0 39
+        default 6  if IDF_TARGET_ESP32S2
+        default 6  if IDF_TARGET_ESP32S3
+        default 8  if IDF_TARGET_ESP32C2
+        default 8  if IDF_TARGET_ESP32C5
+        default 8  if IDF_TARGET_ESP32C6
+        range 0 48
         help
             BL0937 CF output -> ESP32 input (pulse count).
 
@@ -65,7 +90,12 @@ menu "BL0937 Energy Monitor"
         int "CF1 GPIO (pulse input)"
         default 35 if IDF_TARGET_ESP32
         default 5  if IDF_TARGET_ESP32C3
-        range 0 39
+        default 7  if IDF_TARGET_ESP32S2
+        default 7  if IDF_TARGET_ESP32S3
+        default 9  if IDF_TARGET_ESP32C2
+        default 9  if IDF_TARGET_ESP32C5
+        default 9  if IDF_TARGET_ESP32C6
+        range 0 48
         help
             BL0937 CF1 output -> ESP32 input (pulse count).
 
@@ -73,7 +103,12 @@ menu "BL0937 Energy Monitor"
         int "SEL GPIO (output)"
         default 25 if IDF_TARGET_ESP32
         default 21 if IDF_TARGET_ESP32C3
-        range 0 39
+        default 18 if IDF_TARGET_ESP32S2
+        default 18 if IDF_TARGET_ESP32S3
+        default 10 if IDF_TARGET_ESP32C2
+        default 18 if IDF_TARGET_ESP32C5
+        default 18 if IDF_TARGET_ESP32C6
+        range 0 48
         help
             BL0937 SEL control -> ESP32 output.
             On ESP32: must be output-capable (0..33). Do NOT use GPIO34..39.
