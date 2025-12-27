@@ -18,14 +18,14 @@ This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Life
 
 ## Hardware connections
 
-All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come from `main/Kconfig.projbuild`:
+All GPIOs are configurable in `menuconfig` (StudioPieters menu). Defaults come from `main/Kconfig.projbuild` and differ by target:
 
-| Purpose | Kconfig option | Default GPIO |
-|---------|----------------|--------------|
-| Relay output | `CONFIG_ESP_RELAY_GPIO` | 3 |
-| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 4 |
-| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 6 |
-| Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 7 |
+| Purpose | Kconfig option | Default GPIO (ESP32) | Default GPIO (ESP32-C3) |
+|---------|----------------|----------------------|-------------------------|
+| Relay output | `CONFIG_ESP_RELAY_GPIO` | 16 | 6 |
+| Blue LED (relay state) | `CONFIG_ESP_BLUE_LED_GPIO` | 2 | 20 |
+| Red LED (Wi‑Fi/Lifecycle indicator) | `CONFIG_ESP_RED_LED_GPIO` | 19 | 3 |
+| Button (active low by default) | `CONFIG_ESP_BUTTON_GPIO` | 23 | 7 |
 
 The blue LED follows the relay output. The red LED stays on until Wi‑Fi is connected; it also lights up when Wi‑Fi fails to start or provisioning is required.
 
