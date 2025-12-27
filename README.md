@@ -11,6 +11,9 @@ This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Life
   - Single press toggles the relay and notifies HomeKit clients.
   - Long press (10 seconds) performs a full Lifecycle Manager factory reset and reboots.
   - Double press is intentionally unused to avoid accidental triggers.
+- **BL0937 energy metering:** uses the ESP-IDF pulse counter (PCNT) driver to capture CF/CF1 pulses and publishes voltage,
+  current, active power, accumulated energy and power factor into the custom Eve characteristics. Sampling and optional glitch
+  filtering are configurable from `menuconfig`; defaults target all PCNT-capable chips (ESP32, S2/S3, C2/C3/C5/C6, H2, P4…).
 - **Lifecycle Manager integration:** NVS initialization, reset-state logging, Wi‑Fi startup, OTA request helper, and factory reset are all driven through `esp32-lcm` so only minimal glue code remains in `main.c`.
 
 ## Hardware connections
