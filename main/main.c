@@ -24,7 +24,6 @@
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
-#include <math.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
@@ -33,9 +32,8 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
-#include "bl0937.h"
 #include "esp32-lcm.h"
-
+#include "bl0937.h"
 #include "custom_characteristics.h"
 #include <button.h>
 
@@ -48,11 +46,9 @@
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
-static const char *BL0937_TAG  = "BL0937";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
-static bool homekit_ready = false;
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -125,34 +121,6 @@ void gpio_init(void) {
 
         // Bij start is er nog geen WiFi -> rode LED AAN
         red_led_write(true);
-}
-
-static void bl0937_notify_reading(const bl0937_reading_t *reading, void *user_data)
-{
-        (void)user_data;
-
-        custom_voltage.value = HOMEKIT_FLOAT(reading->voltage_v);
-        custom_current.value = HOMEKIT_FLOAT(reading->current_a);
-        custom_power.value = HOMEKIT_FLOAT(reading->active_power_w);
-        custom_total_consumption.value = HOMEKIT_FLOAT(reading->energy_wh / 1000.0); // kWh
-
-        const double apparent_power = reading->voltage_v * reading->current_a;
-        double power_factor = 0.0;
-        if (apparent_power > 0.01) {
-                power_factor = reading->active_power_w / apparent_power;
-                power_factor = fmin(1.0, fmax(0.0, power_factor));
-        }
-        custom_power_factor.value = HOMEKIT_FLOAT(power_factor * 100.0); // percentage
-
-        if (homekit_ready) {
-                homekit_characteristic_notify(&custom_voltage, custom_voltage.value);
-                homekit_characteristic_notify(&custom_current, custom_current.value);
-                homekit_characteristic_notify(&custom_power, custom_power.value);
-                homekit_characteristic_notify(&custom_total_consumption,
-                                              custom_total_consumption.value);
-                homekit_characteristic_notify(&custom_power_factor,
-                                              custom_power_factor.value);
-        }
 }
 
 // ---------- Accessory identification (Blue LED) ----------
@@ -242,11 +210,12 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &outlet_in_use_characteristic,
-                        &custom_voltage,
-                        &custom_current,
-                        &custom_power,
-                        &custom_total_consumption,
-                        &custom_power_factor,
+                        &voltage_characteristic,
+                        &current_characteristic,
+                        &power_characteristic,
+                        &power_factor_characteristic,
+                        &frequency_characteristic,
+                        &total_consumption_characteristic,
                         &ota_trigger,
                         NULL
                 }),
@@ -305,7 +274,6 @@ void on_wifi_ready() {
 
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
-        homekit_ready = true;
         homekit_started = true;
 }
 
@@ -316,14 +284,9 @@ void app_main(void) {
         lifecycle_log_post_reset_state("INFORMATION");
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
-        custom_characteristics_init();
         gpio_init();
 
-        bl0937_config_t bl0937_cfg = bl0937_default_config();
-        esp_err_t bl0937_err = bl0937_start_task(&bl0937_cfg, bl0937_notify_reading, NULL);
-        if (bl0937_err != ESP_OK) {
-                ESP_LOGE(BL0937_TAG, "Failed to start BL0937 task: %s", esp_err_to_name(bl0937_err));
-        }
+        bl0937_start_default();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
