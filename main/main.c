@@ -21,20 +21,17 @@
    for more information visit https://www.studiopieters.nl
  **/
 
+#include <stdio.h>
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
-#include <stddef.h>
-
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
-#include "bl0937.h"
-#include "custom_characteristics.h"
 #include <button.h>
 
 // -------- GPIO configuration (set these in sdkconfig) --------
@@ -68,7 +65,6 @@ static inline void red_led_write(bool on) {
 
 // Forward declaration van de characteristic zodat we hem in functies kunnen gebruiken
 extern homekit_characteristic_t relay_on_characteristic;
-extern homekit_characteristic_t outlet_in_use_characteristic;
 
 // Centrale functie: zet state, stuurt hardware aan en (optioneel) HomeKit-notify
 static void relay_set_state(bool on, bool notify_homekit) {
@@ -87,14 +83,11 @@ static void relay_set_state(bool on, bool notify_homekit) {
 
         // HomeKit characteristic-snapshot updaten
         relay_on_characteristic.value = HOMEKIT_BOOL(relay_on);
-        outlet_in_use_characteristic.value = HOMEKIT_BOOL(relay_on);
 
         // Eventueel HomeKit-clients informeren
         if (notify_homekit) {
                 homekit_characteristic_notify(&relay_on_characteristic,
                                               relay_on_characteristic.value);
-                homekit_characteristic_notify(&outlet_in_use_characteristic,
-                                              outlet_in_use_characteristic.value);
         }
 }
 
@@ -115,7 +108,6 @@ void gpio_init(void) {
         // Initial state: alles uit, in sync brengen
         relay_on = false;
         relay_on_characteristic.value = HOMEKIT_BOOL(false);
-        outlet_in_use_characteristic.value = HOMEKIT_BOOL(false);
         relay_write(false);
         blue_led_write(false);
 
@@ -187,8 +179,6 @@ void relay_on_set(homekit_value_t value) {
 // We keep a handle to ON characteristic so we can notify on button presses
 homekit_characteristic_t relay_on_characteristic =
         HOMEKIT_CHARACTERISTIC_(ON, false, .getter = relay_on_get, .setter = relay_on_set);
-homekit_characteristic_t outlet_in_use_characteristic =
-        HOMEKIT_CHARACTERISTIC_(OUTLET_IN_USE, false);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverride-init"
@@ -209,13 +199,6 @@ homekit_accessory_t *accessories[] = {
                 HOMEKIT_SERVICE(OUTLET, .primary = true, .characteristics = (homekit_characteristic_t *[]) {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
-                        &outlet_in_use_characteristic,
-                        &voltage_characteristic,
-                        &current_characteristic,
-                        &power_characteristic,
-                        &power_factor_characteristic,
-                        &frequency_characteristic,
-                        &total_consumption_characteristic,
                         &ota_trigger,
                         NULL
                 }),
@@ -285,8 +268,6 @@ void app_main(void) {
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
         gpio_init();
-
-        bl0937_start_default();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;
