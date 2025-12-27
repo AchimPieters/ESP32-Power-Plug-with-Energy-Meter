@@ -24,6 +24,7 @@
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
+#include <math.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
@@ -32,6 +33,7 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
+#include "bl0937.h"
 #include "esp32-lcm.h"
 
 #include "custom_characteristics.h"
@@ -43,12 +45,19 @@
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
 #define RED_LED_GPIO     CONFIG_ESP_RED_LED_GPIO   // Rode LED: WiFi/lifecycle-indicator
 
+#define BL0937_CF_POWER_SCALE_W_PER_HZ       1125.0
+#define BL0937_CF_ENERGY_SCALE_WH_PER_PULSE  0.3125
+#define BL0937_CF1_VOLTAGE_SCALE_V_PER_HZ    1.0
+#define BL0937_CF1_CURRENT_SCALE_A_PER_HZ    1.0
+
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
+static const char *BL0937_TAG  = "BL0937";
 
 // Relay / plug state (enige bron van waarheid)
 static bool relay_on = false;
+static bool homekit_ready = false;
 
 // ---------- Low-level GPIO helpers ----------
 
@@ -121,6 +130,66 @@ void gpio_init(void) {
 
         // Bij start is er nog geen WiFi -> rode LED AAN
         red_led_write(true);
+}
+
+static void bl0937_notify_reading(const bl0937_reading_t *reading)
+{
+        custom_voltage.value = HOMEKIT_FLOAT(reading->voltage_v);
+        custom_current.value = HOMEKIT_FLOAT(reading->current_a);
+        custom_power.value = HOMEKIT_FLOAT(reading->active_power_w);
+        custom_total_consumption.value = HOMEKIT_FLOAT(reading->energy_wh / 1000.0); // kWh
+
+        const double apparent_power = reading->voltage_v * reading->current_a;
+        double power_factor = 0.0;
+        if (apparent_power > 0.01) {
+                power_factor = reading->active_power_w / apparent_power;
+                power_factor = fmin(1.0, fmax(0.0, power_factor));
+        }
+        custom_power_factor.value = HOMEKIT_FLOAT(power_factor * 100.0); // percentage
+
+        if (homekit_ready) {
+                homekit_characteristic_notify(&custom_voltage, custom_voltage.value);
+                homekit_characteristic_notify(&custom_current, custom_current.value);
+                homekit_characteristic_notify(&custom_power, custom_power.value);
+                homekit_characteristic_notify(&custom_total_consumption,
+                                              custom_total_consumption.value);
+                homekit_characteristic_notify(&custom_power_factor,
+                                              custom_power_factor.value);
+        }
+}
+
+static void bl0937_task(void *args)
+{
+        const bl0937_config_t cfg = {
+                .cf_pin = CONFIG_ESP_BL0937_CF_GPIO,
+                .cf1_pin = CONFIG_ESP_BL0937_CF1_GPIO,
+                .sel_pin = CONFIG_ESP_BL0937_SEL_GPIO,
+                .sample_period_ms = CONFIG_ESP_BL0937_SAMPLE_PERIOD_MS,
+                .pcnt_glitch_ns = CONFIG_ESP_BL0937_PCNT_GLITCH_NS,
+                .cf_power_scale = BL0937_CF_POWER_SCALE_W_PER_HZ,
+                .cf_energy_scale = BL0937_CF_ENERGY_SCALE_WH_PER_PULSE,
+                .cf1_voltage_scale = BL0937_CF1_VOLTAGE_SCALE_V_PER_HZ,
+                .cf1_current_scale = BL0937_CF1_CURRENT_SCALE_A_PER_HZ,
+        };
+
+        esp_err_t err = bl0937_init(&cfg);
+        if (err != ESP_OK) {
+                ESP_LOGE(BL0937_TAG, "BL0937 init failed: %s", esp_err_to_name(err));
+                vTaskDelete(NULL);
+                return;
+        }
+
+        while (true) {
+                bl0937_reading_t reading = {0};
+                err = bl0937_sample(&reading);
+                if (err == ESP_OK) {
+                        bl0937_notify_reading(&reading);
+                } else {
+                        ESP_LOGW(BL0937_TAG, "Sample failed: %s", esp_err_to_name(err));
+                }
+
+                vTaskDelay(pdMS_TO_TICKS(100));
+        }
 }
 
 // ---------- Accessory identification (Blue LED) ----------
@@ -273,6 +342,7 @@ void on_wifi_ready() {
 
         ESP_LOGI("INFORMATION", "Starting HomeKit server...");
         homekit_server_init(&config);
+        homekit_ready = true;
         homekit_started = true;
 }
 
@@ -285,6 +355,10 @@ void app_main(void) {
 
         custom_characteristics_init();
         gpio_init();
+
+        if (xTaskCreate(bl0937_task, "bl0937", 4096, NULL, 5, NULL) != pdPASS) {
+                ESP_LOGE(BL0937_TAG, "Failed to start BL0937 task");
+        }
 
         button_config_t btn_cfg = button_config_default(button_active_low);
         btn_cfg.max_repeat_presses = 3;

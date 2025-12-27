@@ -78,4 +78,22 @@ menu "BL0937 Energy Monitor"
             BL0937 SEL control -> ESP32 output.
             On ESP32: must be output-capable (0..33). Do NOT use GPIO34..39.
 
+    config ESP_BL0937_SAMPLE_PERIOD_MS
+        int "Sampling window (ms)"
+        default 1000
+        range 50 5000
+        help
+            Duration of each blocking measurement window. Shorter windows update
+            faster but reduce accuracy. Works on ESP32, ESP32-S2/S3, ESP32-C2/C3/C5/C6,
+            ESP32-H2 and ESP32-P4 as long as the PCNT peripheral is available.
+
+    config ESP_BL0937_PCNT_GLITCH_NS
+        int "PCNT glitch filter (ns)"
+        default 0
+        range 0 1000
+        help
+            Optional hardware glitch filter applied by the PCNT peripheral. Leave
+            at 0 to disable when targeting devices without PCNT glitch filtering
+            support.
+
 endmenu
