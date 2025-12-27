@@ -45,6 +45,11 @@
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
 #define RED_LED_GPIO     CONFIG_ESP_RED_LED_GPIO   // Rode LED: WiFi/lifecycle-indicator
 
+#define BL0937_CF_POWER_SCALE_W_PER_HZ       1125.0
+#define BL0937_CF_ENERGY_SCALE_WH_PER_PULSE  0.3125
+#define BL0937_CF1_VOLTAGE_SCALE_V_PER_HZ    1.0
+#define BL0937_CF1_CURRENT_SCALE_A_PER_HZ    1.0
+
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";
 static const char *IDENT_TAG   = "IDENT";
@@ -130,7 +135,6 @@ void gpio_init(void) {
 static void bl0937_notify_reading(const bl0937_reading_t *reading, void *user_data)
 {
         (void)user_data;
-
         custom_voltage.value = HOMEKIT_FLOAT(reading->voltage_v);
         custom_current.value = HOMEKIT_FLOAT(reading->current_a);
         custom_power.value = HOMEKIT_FLOAT(reading->active_power_w);
