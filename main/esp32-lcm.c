@@ -45,11 +45,16 @@
 #include <mdns.h>
 #include <nvs.h>
 #include <nvs_flash.h>
+#include <soc/soc_caps.h>
 
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+
+#if !SOC_WIFI_SUPPORTED
+#error "Wi-Fi station mode is required; this target does not provide Wi-Fi"
+#endif
 
 static const char *WIFI_TAG = "WIFI";
 static const char *LIFECYCLE_TAG = "LIFECYCLE";

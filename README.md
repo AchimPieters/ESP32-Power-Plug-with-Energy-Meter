@@ -13,7 +13,8 @@ This project turns an ESP32 into a HomeKit-enabled smart outlet using the **Life
   - Double press is intentionally unused to avoid accidental triggers.
 - **BL0937 energy metering:** uses the ESP-IDF pulse counter (PCNT) driver to capture CF/CF1 pulses and publishes voltage,
   current, active power, accumulated energy and power factor into the custom Eve characteristics. Sampling and optional glitch
-  filtering are configurable from `menuconfig`; defaults target all PCNT-capable chips (ESP32, S2/S3, C2/C3/C5/C6, H2, P4…).
+  filtering are configurable from `menuconfig`; the driver now performs compile-time capability checks so it only builds on
+  targets that expose both PCNT and Wi‑Fi support.
 - **Lifecycle Manager integration:** NVS initialization, reset-state logging, Wi‑Fi startup, OTA request helper, and factory reset are all driven through `esp32-lcm` so only minimal glue code remains in `main.c`.
 
 ## Hardware connections
@@ -44,7 +45,7 @@ The blue LED follows the relay output. The red LED stays on until Wi‑Fi is con
 
 Prerequisites are declared in `main/idf_component.yml`:
 
-- ESP-IDF `>= 5.0`
+- ESP-IDF `>= 5.4`
 - `achimpieters/esp32-homekit >= 1.3.3`
 - `achimpieters/esp32-button >= 1.2.3`
 
@@ -58,6 +59,27 @@ idf.py flash monitor
 ```
 
 After provisioning Wi‑Fi, the outlet appears in HomeKit with the configured setup code (`CONFIG_ESP_SETUP_CODE`) and setup ID (`CONFIG_ESP_SETUP_ID`).
+
+## Target compatibility audit
+
+The firmware requires **Wi‑Fi STA** and the **PCNT peripheral**. These are enforced at compile time via `SOC_WIFI_SUPPORTED`
+and `SOC_PCNT_SUPPORTED`. In ESP-IDF 5.4, that translates into:
+
+| Target family | Wi‑Fi | PCNT | Expected status |
+|---------------|-------|------|-----------------|
+| ESP32, ESP32-S2, ESP32-S3 | Yes | Yes | ✅ Builds and runs |
+| ESP32-C3, ESP32-C5, ESP32-C6 | Yes | Yes | ✅ Builds and runs |
+| ESP32-C2 | Yes | No | ❌ Energy-meter driver blocked (no PCNT) |
+| ESP32-H2, ESP32-P4 | No | Varies | ❌ Unsupported (no Wi‑Fi for HomeKit) |
+
+If you target other Wi‑Fi-capable chips (e.g., future variants), confirm `SOC_PCNT_SUPPORTED` is defined in their
+`soc_caps.h` file. Without PCNT the BL0937 energy metering code cannot compile; replacing it would require a different pulse
+measurement backend. You can double-check your active target with:
+
+```bash
+idf.py set-target <chip>
+idf.py reconfigure
+```
 
 ## Notes
 
