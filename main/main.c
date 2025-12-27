@@ -210,6 +210,11 @@ homekit_accessory_t *accessories[] = {
                         HOMEKIT_CHARACTERISTIC(NAME, "HomeKit Plug"),
                         &relay_on_characteristic,
                         &outlet_in_use_characteristic,
+                        &custom_voltage,
+                        &custom_current,
+                        &custom_power,
+                        &custom_total_consumption,
+                        &custom_power_factor,
                         &ota_trigger,
                         NULL
                 }),
@@ -278,6 +283,7 @@ void app_main(void) {
         lifecycle_log_post_reset_state("INFORMATION");
         ESP_ERROR_CHECK(lifecycle_configure_homekit(&revision, &ota_trigger, "INFORMATION"));
 
+        custom_characteristics_init();
         gpio_init();
 
         button_config_t btn_cfg = button_config_default(button_active_low);
