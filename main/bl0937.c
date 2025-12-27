@@ -324,7 +324,14 @@ esp_err_t bl0937_start_task(const bl0937_config_t *config, bl0937_reading_cb_t c
         return ESP_ERR_INVALID_ARG;
     }
 
-    esp_err_t err = bl0937_init(config);
+    bl0937_config_t local_cfg = {0};
+    const bl0937_config_t *cfg_to_use = config;
+    if (!cfg_to_use) {
+        local_cfg = bl0937_default_config();
+        cfg_to_use = &local_cfg;
+    }
+
+    esp_err_t err = bl0937_init(cfg_to_use);
     if (err != ESP_OK) {
         return err;
     }

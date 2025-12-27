@@ -319,8 +319,7 @@ void app_main(void) {
         custom_characteristics_init();
         gpio_init();
 
-        bl0937_config_t bl0937_cfg = bl0937_default_config();
-        esp_err_t bl0937_err = bl0937_start_task(&bl0937_cfg, bl0937_notify_reading, NULL);
+        esp_err_t bl0937_err = bl0937_start_task(NULL, bl0937_notify_reading, NULL);
         if (bl0937_err != ESP_OK) {
                 ESP_LOGE(BL0937_TAG, "Failed to start BL0937 task: %s", esp_err_to_name(bl0937_err));
         }

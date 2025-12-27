@@ -80,6 +80,9 @@ bl0937_config_t bl0937_default_config(void);
 /**
  * @brief Start a background sampling task that periodically invokes the provided
  *        callback with fresh readings.
+ *
+ * Passing NULL for @p config uses @ref bl0937_default_config to seed defaults
+ * from sdkconfig and the standard BL0937 scale factors.
  */
 esp_err_t bl0937_start_task(const bl0937_config_t *config, bl0937_reading_cb_t callback, void *user_data);
 
