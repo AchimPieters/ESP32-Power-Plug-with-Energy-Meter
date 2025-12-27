@@ -26,6 +26,10 @@ typedef struct {
     pcnt_unit_handle_t cf1_unit;
     SemaphoreHandle_t lock;
     double energy_accum_wh;
+    bl0937_reading_cb_t callback;
+    void *callback_ctx;
+    TaskHandle_t task;
+    bool stop_requested;
     bool initialised;
 } bl0937_context_t;
 
@@ -53,6 +57,10 @@ static void bl0937_cleanup(void)
     }
 
     s_ctx.energy_accum_wh = 0;
+    s_ctx.callback = NULL;
+    s_ctx.callback_ctx = NULL;
+    s_ctx.stop_requested = false;
+    s_ctx.task = NULL;
     s_ctx.initialised = false;
     memset(&s_ctx.cfg, 0, sizeof(s_ctx.cfg));
 }
@@ -120,6 +128,21 @@ static double bl0937_frequency_from_counts(int counts, uint32_t window_ms)
 
     const double period_seconds = (double)window_ms / 1000.0;
     return counts / period_seconds;
+}
+
+bl0937_config_t bl0937_default_config(void)
+{
+    return (bl0937_config_t) {
+        .cf_pin = CONFIG_ESP_BL0937_CF_GPIO,
+        .cf1_pin = CONFIG_ESP_BL0937_CF1_GPIO,
+        .sel_pin = CONFIG_ESP_BL0937_SEL_GPIO,
+        .sample_period_ms = CONFIG_ESP_BL0937_SAMPLE_PERIOD_MS,
+        .pcnt_glitch_ns = CONFIG_ESP_BL0937_PCNT_GLITCH_NS,
+        .cf_power_scale = BL0937_CF_POWER_SCALE_W_PER_HZ,
+        .cf_energy_scale = BL0937_CF_ENERGY_SCALE_WH_PER_PULSE,
+        .cf1_voltage_scale = BL0937_CF1_VOLTAGE_SCALE_V_PER_HZ,
+        .cf1_current_scale = BL0937_CF1_CURRENT_SCALE_A_PER_HZ,
+    };
 }
 
 esp_err_t bl0937_init(const bl0937_config_t *config)
@@ -266,5 +289,71 @@ esp_err_t bl0937_sample(bl0937_reading_t *out)
 exit:
     xSemaphoreGive(s_ctx.lock);
     return err;
+}
+
+static void bl0937_task(void *args)
+{
+    const TickType_t delay_ticks = pdMS_TO_TICKS(s_ctx.cfg.sample_period_ms);
+
+    while (!s_ctx.stop_requested) {
+        bl0937_reading_t reading = {0};
+        esp_err_t err = bl0937_sample(&reading);
+        if (err == ESP_OK) {
+            if (s_ctx.callback) {
+                s_ctx.callback(&reading, s_ctx.callback_ctx);
+            }
+        } else {
+            ESP_LOGW(TAG, "Sample failed: %s", esp_err_to_name(err));
+        }
+
+        vTaskDelay(delay_ticks ? delay_ticks : 1);
+    }
+
+    bl0937_cleanup();
+    s_ctx.task = NULL;
+    vTaskDelete(NULL);
+}
+
+esp_err_t bl0937_start_task(const bl0937_config_t *config, bl0937_reading_cb_t callback, void *user_data)
+{
+    if (s_ctx.task) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (!callback) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    esp_err_t err = bl0937_init(config);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    s_ctx.callback = callback;
+    s_ctx.callback_ctx = user_data;
+    s_ctx.stop_requested = false;
+
+    BaseType_t created = xTaskCreate(bl0937_task, "bl0937", 4096, NULL, 5, &s_ctx.task);
+    if (created != pdPASS) {
+        bl0937_cleanup();
+        return ESP_ERR_NO_MEM;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t bl0937_stop_task(void)
+{
+    if (!s_ctx.task) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    s_ctx.stop_requested = true;
+
+    while (s_ctx.task) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    return ESP_OK;
 }
 

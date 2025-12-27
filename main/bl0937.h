@@ -4,6 +4,11 @@
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 
+#define BL0937_CF_POWER_SCALE_W_PER_HZ       1125.0
+#define BL0937_CF_ENERGY_SCALE_WH_PER_PULSE  0.3125
+#define BL0937_CF1_VOLTAGE_SCALE_V_PER_HZ    1.0
+#define BL0937_CF1_CURRENT_SCALE_A_PER_HZ    1.0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,6 +47,8 @@ typedef struct {
     double energy_wh;
 } bl0937_reading_t;
 
+typedef void (*bl0937_reading_cb_t)(const bl0937_reading_t *reading, void *user_data);
+
 /**
  * @brief Initialise the BL0937 driver.
  *
@@ -63,6 +70,23 @@ esp_err_t bl0937_init(const bl0937_config_t *config);
  * @return esp_err_t ESP_OK on success, error code otherwise.
  */
 esp_err_t bl0937_sample(bl0937_reading_t *out);
+
+/**
+ * @brief Convenience helper returning a config seeded from sdkconfig defaults and
+ *        standard BL0937 scale factors.
+ */
+bl0937_config_t bl0937_default_config(void);
+
+/**
+ * @brief Start a background sampling task that periodically invokes the provided
+ *        callback with fresh readings.
+ */
+esp_err_t bl0937_start_task(const bl0937_config_t *config, bl0937_reading_cb_t callback, void *user_data);
+
+/**
+ * @brief Stop the background sampling task created via @ref bl0937_start_task.
+ */
+esp_err_t bl0937_stop_task(void);
 
 #ifdef __cplusplus
 }
