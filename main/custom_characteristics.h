@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include <homekit/characteristics.h>
 #include <homekit/homekit.h>
 
@@ -7,14 +9,14 @@
 #define HOMEKIT_CUSTOM_UUID(value) (value "-0e36-4a42-ad11-745a73b84f2b")
 #endif
 
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_VOLTAGE "E863F10A-079E-48FF-8F27-9C2605A29F52"
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_CURRENT "E863F126-079E-48FF-8F27-9C2605A29F52"
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_POWER "E863F10D-079E-48FF-8F27-9C2605A29F52"
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_TOTAL_CONSUMPTION "E863F10C-079E-48FF-8F27-9C2605A29F52"
-#define HOMEKIT_CHARACTERISTIC_CUSTOM_POWER_FACTOR "E863F110-079E-48FF-8F27-9C2605A29F52"
+#define HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_VOLTAGE "E863F10A-079E-48FF-8F27-9C2605A29F52"
+#define HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_CURRENT "E863F126-079E-48FF-8F27-9C2605A29F52"
+#define HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_POWER "E863F10D-079E-48FF-8F27-9C2605A29F52"
+#define HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_TOTAL_CONSUMPTION "E863F10C-079E-48FF-8F27-9C2605A29F52"
+#define HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_POWER_FACTOR "E863F110-079E-48FF-8F27-9C2605A29F52"
 
 #define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_VOLTAGE(_value, ...) \
-        .type = HOMEKIT_CHARACTERISTIC_CUSTOM_VOLTAGE, \
+        .type = HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_VOLTAGE, \
         .description = "Voltage", \
         .format = homekit_format_float, \
         .permissions = homekit_permissions_paired_read \
@@ -26,7 +28,7 @@
         ## __VA_ARGS__
 
 #define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_CURRENT(_value, ...) \
-        .type = HOMEKIT_CHARACTERISTIC_CUSTOM_CURRENT, \
+        .type = HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_CURRENT, \
         .description = "Current", \
         .format = homekit_format_float, \
         .permissions = homekit_permissions_paired_read \
@@ -38,7 +40,7 @@
         ## __VA_ARGS__
 
 #define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_POWER(_value, ...) \
-        .type = HOMEKIT_CHARACTERISTIC_CUSTOM_POWER, \
+        .type = HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_POWER, \
         .description = "Power", \
         .format = homekit_format_float, \
         .permissions = homekit_permissions_paired_read \
@@ -50,7 +52,7 @@
         ## __VA_ARGS__
 
 #define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_TOTAL_CONSUMPTION(_value, ...) \
-        .type = HOMEKIT_CHARACTERISTIC_CUSTOM_TOTAL_CONSUMPTION, \
+        .type = HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_TOTAL_CONSUMPTION, \
         .description = "Total Consumption", \
         .format = homekit_format_float, \
         .permissions = homekit_permissions_paired_read \
@@ -61,7 +63,7 @@
         ## __VA_ARGS__
 
 #define HOMEKIT_DECLARE_CHARACTERISTIC_CUSTOM_POWER_FACTOR(_value, ...) \
-        .type = HOMEKIT_CHARACTERISTIC_CUSTOM_POWER_FACTOR, \
+        .type = HOMEKIT_CHARACTERISTIC_UUID_CUSTOM_POWER_FACTOR, \
         .description = "Power Factor", \
         .format = homekit_format_float, \
         .unit = homekit_unit_percentage, \
