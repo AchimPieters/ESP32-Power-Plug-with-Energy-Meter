@@ -3,8 +3,13 @@
 #include <sdkconfig.h>
 
 #include <esp_err.h>
+#include <esp_idf_version.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 4, 0)
+#error "ESP-IDF v5.4 or newer is required for this component"
+#endif
 
 #ifndef __HOMEKIT_CUSTOM_CHARACTERISTICS__
 #define __HOMEKIT_CUSTOM_CHARACTERISTICS__
