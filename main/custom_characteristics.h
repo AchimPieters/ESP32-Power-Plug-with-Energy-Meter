@@ -79,10 +79,10 @@
 #define HOMEKIT_CHARACTERISTIC_CUSTOM_TOTAL_CONSUMPTION(...) HOMEKIT_CHARACTERISTIC_(CUSTOM_TOTAL_CONSUMPTION, __VA_ARGS__)
 #define HOMEKIT_CHARACTERISTIC_CUSTOM_POWER_FACTOR(...) HOMEKIT_CHARACTERISTIC_(CUSTOM_POWER_FACTOR, __VA_ARGS__)
 
-homekit_characteristic_t custom_voltage;
-homekit_characteristic_t custom_current;
-homekit_characteristic_t custom_power;
-homekit_characteristic_t custom_total_consumption;
-homekit_characteristic_t custom_power_factor;
+extern homekit_characteristic_t custom_voltage;
+extern homekit_characteristic_t custom_current;
+extern homekit_characteristic_t custom_power;
+extern homekit_characteristic_t custom_total_consumption;
+extern homekit_characteristic_t custom_power_factor;
 
 void custom_characteristics_init(void);
