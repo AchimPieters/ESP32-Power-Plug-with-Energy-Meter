@@ -28,6 +28,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <driver/gpio.h>
+#include <soc/soc_caps.h>
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 
@@ -39,6 +40,15 @@
 #define RELAY_GPIO       CONFIG_ESP_RELAY_GPIO
 #define BLUE_LED_GPIO    CONFIG_ESP_BLUE_LED_GPIO
 #define RED_LED_GPIO     CONFIG_ESP_RED_LED_GPIO   // Rode LED: WiFi/lifecycle-indicator
+
+_Static_assert(RELAY_GPIO >= 0 && RELAY_GPIO < SOC_GPIO_PIN_COUNT,
+               "RELAY_GPIO is outside the supported pin range for this target");
+_Static_assert(BLUE_LED_GPIO >= 0 && BLUE_LED_GPIO < SOC_GPIO_PIN_COUNT,
+               "BLUE_LED_GPIO is outside the supported pin range for this target");
+_Static_assert(RED_LED_GPIO >= 0 && RED_LED_GPIO < SOC_GPIO_PIN_COUNT,
+               "RED_LED_GPIO is outside the supported pin range for this target");
+_Static_assert(BUTTON_GPIO >= 0 && BUTTON_GPIO < SOC_GPIO_PIN_COUNT,
+               "BUTTON_GPIO is outside the supported pin range for this target");
 
 static const char *RELAY_TAG   = "RELAY";
 static const char *BUTTON_TAG  = "BUTTON";

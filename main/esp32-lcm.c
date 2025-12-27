@@ -42,6 +42,7 @@
 #include <esp_partition.h>
 #include <esp_sleep.h>
 #include <esp_timer.h>
+#include <soc/soc_caps.h>
 #include <mdns.h>
 #include <nvs.h>
 #include <nvs_flash.h>
@@ -50,6 +51,10 @@
 #include <homekit/characteristics.h>
 
 #include "esp32-lcm.h"
+
+#if !SOC_WIFI_SUPPORTED
+#error "This firmware requires a Wi-Fi capable target (e.g., ESP32/ESP32-S2/ESP32-S3/ESP32-C2/C3/C5/C6)"
+#endif
 
 static const char *WIFI_TAG = "WIFI";
 static const char *LIFECYCLE_TAG = "LIFECYCLE";
