@@ -5,6 +5,8 @@ This repository contains firmware for a **smart mains power plug** based on **ES
 
 The project is intended for **advanced users** with experience in embedded systems and mains‑powered hardware.
 
+More information, go to https://www.studiopieters.nl
+
 ---
 
 ## ⚠️ HIGH VOLTAGE WARNING
@@ -55,25 +57,6 @@ If you are unsure — **consult a licensed electrician**.
 - **ESP8685-WROOM-03**
 
 > Other ESP32 variants may work but are not officially tested.
-
----
-
-## Project Structure
-
-```
-.
-├── main/
-│   ├── app_main.c
-│   ├── bl0937.c / bl0937.h
-│   ├── homekit.c
-│   ├── gpio.c
-│   ├── idf_component.yml
-│   └── ...
-├── components/
-├── CMakeLists.txt
-├── sdkconfig.defaults
-└── README.md
-```
 
 ---
 
